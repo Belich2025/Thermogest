@@ -988,6 +988,14 @@ function ParteModal({ averia, cliente, user, empresa, profiles, refresh, onClose
   const iaTranscriptRef = useRef("");
   const iaActivaRef = useRef(false);
   const [matDrop,setMatDrop]=useState(-1);
+  const [showDatosCliente, setShowDatosCliente] = useState(false);
+  const [datosCliente, setDatosCliente] = useState({
+    nombre: cliente?.nombre||"",
+    telefono: cliente?.telefono||"",
+    direccion: cliente?.direccion||"",
+    email: cliente?.email||"",
+    dni: cliente?.dni||""
+  });
   const upd = (k,v) => setForm(p=>({...p,[k]:v}));
 
   const h = (form.horaInicio&&form.horaFin)?(()=>{ const [h1,m1]=form.horaInicio.split(":").map(Number),[h2,m2]=form.horaFin.split(":").map(Number); return Math.max(0,((h2*60+m2)-(h1*60+m1))/60); })():0;
@@ -1002,6 +1010,12 @@ function ParteModal({ averia, cliente, user, empresa, profiles, refresh, onClose
   function removeMat(i){ if(form.materiales.length===1) return; upd("materiales",form.materiales.filter((_,j)=>j!==i)); }
 
   // Firma setup on mount
+  useEffect(()=>{
+    if(!cliente) return;
+    const falta = !cliente.nombre||!cliente.telefono||!cliente.direccion||!cliente.email||!cliente.dni;
+    if(falta) setShowDatosCliente(true);
+  },[]);
+
   useEffect(()=>{
     const canvas = firmaRef.current;
     if(!canvas) return;
@@ -1151,6 +1165,52 @@ function ParteModal({ averia, cliente, user, empresa, profiles, refresh, onClose
     <Modal onClose={onClose} w={620}>
       <MHead title="Parte de trabajo" sub={`${averia.equipo||""} · ${cliente?.nombre||""}`} onClose={onClose}/>
       <div style={{ display:"flex",flexDirection:"column",gap:10,padding:isMobile?"12px 10px":"14px 20px" }}>
+
+        {showDatosCliente && (
+          <div style={{background:T.orangeLight, border:`1px solid ${T.orange}44`, borderRadius:10,
+            padding:"14px 16px", marginBottom:16}}>
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10}}>
+              <div style={{fontSize:13, fontWeight:700, color:T.orange}}>
+                Datos del cliente incompletos para facturación
+              </div>
+              <button onClick={()=>setShowDatosCliente(false)}
+                style={{background:"none", border:"none", cursor:"pointer", color:T.muted, fontSize:16}}>✕</button>
+            </div>
+            {[
+              {k:"nombre", l:"Nombre"},
+              {k:"telefono", l:"Teléfono"},
+              {k:"direccion", l:"Dirección"},
+              {k:"email", l:"Email"},
+              {k:"dni", l:"DNI/NIF"}
+            ].map(f => (!cliente[f.k] &&
+              <div key={f.k} style={{marginBottom:8}}>
+                <div style={{fontSize:11, color:T.muted, marginBottom:3}}>{f.l}</div>
+                <input
+                  value={datosCliente[f.k]}
+                  onChange={e=>setDatosCliente(p=>({...p,[f.k]:e.target.value}))}
+                  placeholder={f.l}
+                  style={{...inp(), fontSize:13}}
+                />
+              </div>
+            ))}
+            <button
+              onClick={async()=>{
+                const updates = {};
+                ["nombre","telefono","direccion","email","dni"].forEach(k=>{
+                  if(!cliente[k] && datosCliente[k]) updates[k]=datosCliente[k];
+                });
+                if(Object.keys(updates).length>0){
+                  await supabase.from("clientes").update(updates).eq("id", cliente.id);
+                  refresh?.();
+                }
+                setShowDatosCliente(false);
+              }}
+              style={{width:"100%", padding:"8px", borderRadius:8, background:T.orange,
+                color:"#fff", border:"none", cursor:"pointer", fontSize:13, fontWeight:600, marginTop:4}}>
+              Guardar y continuar
+            </button>
+          </div>
+        )}
 
         {/* Botón crear parte con IA */}
         {iaActiva
