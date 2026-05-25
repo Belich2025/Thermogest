@@ -2257,6 +2257,8 @@ function AvisosView({ data, user, techs, refresh, empresa, onSelect, onSelectMan
                     <span style={{ fontSize:12, color:T.muted }}>{b.equipo}</span>
                     <span style={{ color:T.border, fontSize:10 }}>·</span>
                     <span style={{ fontSize:12, color:T.muted }}>{b.fecha_visita}</span>
+                    <span style={{ color:T.border, fontSize:10 }}>·</span>
+                    <span style={{ fontSize:12, color:T.muted }}>{new Date(b.created_at).toLocaleDateString("es-ES")}</span>
                     {b.from_form && <span style={{ fontSize:10, padding:"1px 7px", borderRadius:20, background:T.purpleLight, color:T.purple, fontWeight:600 }}>Web</span>}
                     <BadgeProg fecha={evBd?.fecha}/>
                   </div>
@@ -2297,6 +2299,8 @@ function AvisosView({ data, user, techs, refresh, empresa, onSelect, onSelectMan
                     <span style={{ fontSize:12, color:T.muted }}>{m.equipo}</span>
                     <span style={{ color:T.border, fontSize:10 }}>·</span>
                     <span style={{ fontSize:12, color:T.muted }}>{m.fecha_visita}</span>
+                    <span style={{ color:T.border, fontSize:10 }}>·</span>
+                    <span style={{ fontSize:12, color:T.muted }}>{new Date(m.created_at).toLocaleDateString("es-ES")}</span>
                     {m.from_form && <span style={{ fontSize:10, padding:"1px 7px", borderRadius:20, background:T.purpleLight, color:T.purple, fontWeight:600 }}>Web</span>}
                     <BadgeProg fecha={evMt?.fecha}/>
                   </div>
@@ -6172,6 +6176,8 @@ function InstalacionesObrasView({ data, user, techs, refresh, empresa }) {
               <div style={{ display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" }}>
                 <span style={{ fontSize:12,fontWeight:500,color:T.text }}>{c?.nombre}</span>
                 {o.fecha_inicio&&<><span style={{ color:T.border,fontSize:10 }}>·</span><span style={{ fontSize:12,color:T.muted }}>{o.fecha_inicio}</span></>}
+                <span style={{ color:T.border,fontSize:10 }}>·</span>
+                <span style={{ fontSize:12,color:T.muted }}>{new Date(o.created_at).toLocaleDateString("es-ES")}</span>
                 {o.presupuesto_id&&<span style={{ fontSize:10,padding:"1px 7px",borderRadius:20,background:T.accentLight,color:T.accent,fontWeight:600 }}>Con presupuesto</span>}
                 <BadgeProg fecha={evOb?.fecha}/>
               </div>
