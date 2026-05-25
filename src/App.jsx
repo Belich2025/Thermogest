@@ -2139,13 +2139,12 @@ function NuevoAvisoModal({ data, user, techs, refresh, onClose }) {
   );
 }
 
-function AvisosView({ data, user, techs, refresh, empresa, onSelect }) {
+function AvisosView({ data, user, techs, refresh, empresa, onSelect, onSelectMant }) {
   const isMobile = useIsMobile();
   const isAdmin  = user.role === "admin";
-  const [tab, setTab]                   = useState("averias");
-  const [filter, setFilter]             = useState("activos");
-  const [showNew, setShowNew]           = useState(false);
-  const [selectedMant, setSelectedMant] = useState(null);
+  const [tab, setTab]       = useState("averias");
+  const [filter, setFilter] = useState("activos");
+  const [showNew, setShowNew] = useState(false);
 
   const allBds   = (data.averias||[]).filter(b => isAdmin || !b.tecnico_id || b.tecnico_id===user.id);
   const allMants = (data.mantenimientos||[]).filter(m => isAdmin || !m.tecnico_id || m.tecnico_id===user.id);
@@ -2286,7 +2285,7 @@ function AvisosView({ data, user, techs, refresh, empresa, onSelect }) {
             const pf = m.status==="pendiente_facturar";
             const evMt = (data.eventos||[]).find(e=>e.averia_id==="mant_"+m.id);
             return (
-              <div key={m.id} onClick={()=>setSelectedMant(m)}
+              <div key={m.id} onClick={()=>onSelectMant?.(m)}
                 style={{ background:pf?"#fffdf0":T.card, border:`1px solid ${pf?"#fde68a":T.border}`, borderLeft:`4px solid ${s?.color||T.muted}`, borderRadius:8, padding:"8px 12px", cursor:"pointer", transition:"all 0.15s" }}
                 onMouseEnter={e=>{ e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)"; e.currentTarget.style.transform="translateY(-1px)"; }}
                 onMouseLeave={e=>{ e.currentTarget.style.boxShadow=pf?"0 0 0 1px #fde68a":"0 1px 3px rgba(0,0,0,0.04)"; e.currentTarget.style.transform="translateY(0)"; }}>
@@ -2317,7 +2316,6 @@ function AvisosView({ data, user, techs, refresh, empresa, onSelect }) {
       )}
 
       {showNew && <NuevoAvisoModal data={data} user={user} techs={techs} refresh={refresh} onClose={()=>setShowNew(false)}/>}
-      {selectedMant && <MantenimientoDetalle mant={selectedMant} data={data} user={user} techs={techs} empresa={empresa} refresh={refresh} onClose={()=>setSelectedMant(null)}/>}
     </div>
   );
 }
@@ -3760,7 +3758,7 @@ function EquipoDetalle({ equipo, data, refresh, onClose }) {
 }
 
 
-function ClienteDetalle({ cliente, data, refresh, onClose, onSelectAveria, onSelectPresu }) {
+function ClienteDetalle({ cliente, data, refresh, onClose, onSelectAveria, onSelectPresu, onSelectMant, onSelectInst }) {
   const isMobile=useIsMobile();
   const [tab,setTab]=useState("info");
   const [editing,setEditing]=useState(false);
@@ -3771,10 +3769,56 @@ function ClienteDetalle({ cliente, data, refresh, onClose, onSelectAveria, onSel
   const presupuestos=(data.presupuestos||[]).filter(p=>p.cliente_id===cliente.id).sort((a,b)=>b.id-a.id);
   const instalaciones=(data.instalaciones||[]).filter(i=>i.cliente_id===cliente.id);
   const [selInst,setSelInst]=useState(null);
+  const [showHistorial, setShowHistorial] = useState(false);
+  const [partes, setPartes] = useState([]);
+  const [loadingPartes, setLoadingPartes] = useState(false);
 
   const equipos=(data.equipos||[]).filter(e=>e.cliente_id===cliente.id);
   const [selEquipo,setSelEquipo]=useState(null);
   const [showNuevoEquipo,setShowNuevoEquipo]=useState(false);
+
+  const historial = [
+    ...averias.filter(a => ["cerrada","pendiente_facturar","facturado"].includes(a.status)).map(a => ({
+      id: "av_"+a.id, tipo: "averia", fecha: a.created_at,
+      descripcion: a.descripcion, estado: a.status,
+      importe: (a.importe_mo||0)+(a.importe_materiales||0),
+      ref: a
+    })),
+    ...(data.mantenimientos||[]).filter(m => m.cliente_id === cliente.id).filter(m => ["cerrado","pendiente_facturar","facturado"].includes(m.status)).map(m => ({
+      id: "mt_"+m.id, tipo: "mantenimiento", fecha: m.created_at,
+      descripcion: m.descripcion, estado: m.status,
+      importe: (m.importe_mo||0)+(m.importe_materiales||0),
+      ref: m
+    })),
+    ...presupuestos.filter(p => ["aceptado","rechazado"].includes(p.status)).map(p => ({
+      id: "pr_"+p.id, tipo: "presupuesto", fecha: p.created_at,
+      descripcion: p.descripcion, estado: p.status,
+      importe: p.importe||0,
+      ref: p
+    })),
+    ...(data.instalaciones_obras||[]).filter(i => i.cliente_id === cliente.id && ["pendiente_facturar","facturada"].includes(i.status)).map(i => ({
+      id: "in_"+i.id, tipo: "instalacion", fecha: i.created_at,
+      descripcion: i.descripcion||i.nombre, estado: i.status,
+      importe: i.importe||0,
+      ref: i
+    })),
+  ].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+
+  const cargarPartes = async () => {
+    setLoadingPartes(true);
+    const idsAverias = averias.map(a => a.id);
+    const idsMants = (data.mantenimientos||[]).filter(m => m.cliente_id === cliente.id).map(m => m.id);
+    const idsObras = (data.instalaciones_obras||[]).filter(i => i.cliente_id === cliente.id).map(i => i.id);
+    let q = supabase.from("partes").select("*");
+    const ors = [];
+    if(idsAverias.length) ors.push(`averia_id.in.(${idsAverias.join(",")})`);
+    if(idsMants.length) ors.push(`mantenimiento_id.in.(${idsMants.join(",")})`);
+    if(idsObras.length) ors.push(`instalacion_id.in.(${idsObras.join(",")})`);
+    if(ors.length === 0) { setPartes([]); setLoadingPartes(false); return; }
+    const { data: ps } = await q.or(ors.join(",")).order("created_at", { ascending: false });
+    setPartes(ps||[]);
+    setLoadingPartes(false);
+  };
 
   const tabs=[
     {k:"info",     l:"Información"},
@@ -3850,6 +3894,7 @@ function ClienteDetalle({ cliente, data, refresh, onClose, onSelectAveria, onSel
                 </div>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                   <Btn ch="Editar datos" onClick={()=>setEditing(true)} v="g"/>
+                  <Btn ch="Historial" onClick={()=>{ setShowHistorial(true); cargarPartes(); }} v="s" sm/>
                   {/* Portal */}
                   {cliente.portal_token ? (
                     <Btn ch="Copiar enlace portal" onClick={()=>{ navigator.clipboard.writeText(`${window.location.origin}/cliente/${cliente.portal_token}`); alert("Enlace copiado. Envíaselo al cliente."); }} v="s" sm/>
@@ -3994,6 +4039,167 @@ function ClienteDetalle({ cliente, data, refresh, onClose, onSelectAveria, onSel
         )}
 
       </div>
+
+      {showHistorial && (
+        <div style={{ position:"fixed", top:0, right:0, width:"min(420px,100vw)", height:"100vh",
+                      background:T.card, borderLeft:`1px solid ${T.border}`, zIndex:1100,
+                      display:"flex", flexDirection:"column", boxShadow:"-4px 0 24px #0004" }}>
+
+          {/* Cabecera */}
+          <div style={{ padding:"18px 20px", borderBottom:`1px solid ${T.border}`,
+                        display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div>
+              <div style={{ fontWeight:700, fontSize:16, color:T.text }}>Historial</div>
+              <div style={{ fontSize:12, color:T.muted }}>{cliente.nombre} {cliente.apellidos||""}</div>
+            </div>
+            <button onClick={()=>setShowHistorial(false)}
+              style={{ background:"none", border:"none", cursor:"pointer", color:T.muted, fontSize:20 }}>✕</button>
+          </div>
+
+          {/* Resumen financiero */}
+          <div style={{ padding:"14px 20px", borderBottom:`1px solid ${T.border}`,
+                        display:"flex", gap:12 }}>
+            {[
+              { l:"Total facturado", v: historial.reduce((s,h)=>s+(h.importe||0),0) },
+              { l:"Registros", v: historial.length }
+            ].map(item=>(
+              <div key={item.l} style={{ flex:1, background:T.surface, borderRadius:10,
+                                         padding:"10px 14px", textAlign:"center" }}>
+                <div style={{ fontSize:11, color:T.muted, marginBottom:4 }}>{item.l}</div>
+                <div style={{ fontWeight:700, fontSize:15, color:T.text }}>
+                  {typeof item.v==="number" && item.l!=="Registros"
+                    ? item.v.toFixed(2)+"€" : item.v}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Timeline */}
+          <div style={{ flex:1, overflowY:"auto", padding:"16px 20px", display:"flex",
+                        flexDirection:"column", gap:10 }}>
+
+            {loadingPartes && <div style={{textAlign:"center",padding:20,color:T.muted,fontSize:13}}>Cargando...</div>}
+
+            {!loadingPartes && historial.length===0 && (
+              <div style={{textAlign:"center",color:T.muted,fontSize:13,marginTop:40}}>Sin registros históricos</div>
+            )}
+
+            {historial.map(h => {
+              const cfg = {
+                averia:        { color:T.red,    label:"Avería" },
+                mantenimiento: { color:T.accent, label:"Mantenimiento" },
+                presupuesto:   { color:T.purple, label:"Presupuesto" },
+                instalacion:   { color:T.orange, label:"Instalación" },
+              }[h.tipo];
+
+              const estadoLabel = h.tipo==="averia" ? (BS[h.estado]?.label||h.estado)
+                : h.tipo==="mantenimiento" ? (MS[h.estado]?.label||h.estado)
+                : h.tipo==="presupuesto" ? (PS[h.estado]?.label||h.estado)
+                : h.estado||null;
+
+              const partesVinculados = partes.filter(p =>
+                (h.tipo==="averia" && p.averia_id === h.ref.id) ||
+                (h.tipo==="mantenimiento" && p.mantenimiento_id === h.ref.id) ||
+                (h.tipo==="instalacion" && p.instalacion_id === h.ref.id)
+              );
+
+              const obraVinculada = h.tipo==="presupuesto"
+                ? (data.instalaciones_obras||[]).find(o => o.presupuesto_id === h.ref.id && ["pendiente_facturar","facturada"].includes(o.status))
+                : null;
+
+              const partesObra = obraVinculada
+                ? partes.filter(p => p.instalacion_id === obraVinculada.id)
+                : [];
+
+              return (
+                <div key={h.id} style={{background:T.surface, borderRadius:12, padding:"14px 16px",
+                  border:`1px solid ${T.border}`, cursor:"pointer"}}
+                  onClick={()=>{
+                    setShowHistorial(false);
+                    if(h.tipo==="averia") onSelectAveria?.(h.ref);
+                    else if(h.tipo==="presupuesto") onSelectPresu?.(h.ref);
+                    else if(h.tipo==="mantenimiento") onSelectMant?.(h.ref);
+                    else if(h.tipo==="instalacion") onSelectInst?.(h.ref);
+                  }}>
+
+                  {/* Cabecera del registro */}
+                  <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:6}}>
+                    <div style={{display:"flex", gap:8, alignItems:"center"}}>
+                      <div style={{width:8, height:8, borderRadius:"50%", background:cfg.color, flexShrink:0}}/>
+                      <span style={{fontSize:12, fontWeight:700, color:cfg.color}}>{cfg.label}</span>
+                      {estadoLabel && <span style={{fontSize:11, padding:"1px 8px", borderRadius:20,
+                        background:cfg.color+"22", color:cfg.color, fontWeight:600}}>{estadoLabel}</span>}
+                    </div>
+                    <span style={{fontSize:11, color:T.muted}}>{new Date(h.fecha).toLocaleDateString("es-ES")}</span>
+                  </div>
+
+                  {/* Descripción del registro */}
+                  <div style={{fontSize:13, color:T.text, lineHeight:1.4, marginBottom: partesVinculados.length||obraVinculada ? 10 : 0}}>
+                    {h.descripcion||"Sin descripción"}
+                  </div>
+
+                  {/* Importe del registro si no tiene partes */}
+                  {h.importe>0 && partesVinculados.length===0 && !obraVinculada && (
+                    <div style={{fontSize:13, fontWeight:700, color:T.text}}>{h.importe.toFixed(2)}€</div>
+                  )}
+
+                  {/* Partes vinculados */}
+                  {partesVinculados.map(p => (
+                    <div key={p.id} onClick={e=>e.stopPropagation()}
+                      style={{marginTop:8, paddingLeft:16, borderLeft:`2px solid ${T.border}`}}>
+                      <div style={{fontSize:11, fontWeight:600, color:T.muted, marginBottom:4}}>
+                        Parte — {p.fecha ? new Date(p.fecha).toLocaleDateString("es-ES") : ""}{p.tecnico_nombre ? " · "+p.tecnico_nombre : ""}
+                      </div>
+                      {p.trabajo && <div style={{fontSize:12, color:T.text, lineHeight:1.4, marginBottom:4}}>{p.trabajo}</div>}
+                      {p.observaciones && <div style={{fontSize:11, color:T.muted, marginBottom:4}}>{p.observaciones}</div>}
+                      {(p.materiales||[]).length>0 && (
+                        <div style={{fontSize:11, color:T.muted, marginBottom:4}}>
+                          <span style={{fontWeight:600}}>Materiales: </span>
+                          {p.materiales.map(m=>`${m.desc||m.nombre||""} x${m.qty||m.cantidad||1}`).join(" · ")}
+                        </div>
+                      )}
+                      <div style={{display:"flex", gap:12, fontSize:12, marginTop:4}}>
+                        {p.importe_mo>0 && <span style={{color:T.muted}}>MO: <b style={{color:T.text}}>{p.importe_mo.toFixed(2)}€</b></span>}
+                        {p.importe_materiales>0 && <span style={{color:T.muted}}>Mat: <b style={{color:T.text}}>{p.importe_materiales.toFixed(2)}€</b></span>}
+                        {p.importe_total>0 && <span style={{color:T.accent, fontWeight:700}}>{p.importe_total.toFixed(2)}€</span>}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Instalación vinculada a presupuesto */}
+                  {obraVinculada && (
+                    <div style={{marginTop:8, paddingLeft:16, borderLeft:`2px solid ${T.orange}44`}}>
+                      <div style={{fontSize:11, fontWeight:600, color:T.orange, marginBottom:4}}>
+                        Instalación vinculada — {MS[obraVinculada.status]?.label||obraVinculada.status||""}
+                      </div>
+                      {obraVinculada.descripcion && <div style={{fontSize:12, color:T.text, marginBottom:4}}>{obraVinculada.descripcion}</div>}
+                      {partesObra.map(p => (
+                        <div key={p.id} style={{marginTop:6, paddingLeft:12, borderLeft:`2px solid ${T.border}`}}>
+                          <div style={{fontSize:11, fontWeight:600, color:T.muted, marginBottom:2}}>
+                            Parte — {p.fecha ? new Date(p.fecha).toLocaleDateString("es-ES") : ""}{p.tecnico_nombre ? " · "+p.tecnico_nombre : ""}
+                          </div>
+                          {p.trabajo && <div style={{fontSize:12, color:T.text, lineHeight:1.4, marginBottom:4}}>{p.trabajo}</div>}
+                          {(p.materiales||[]).length>0 && (
+                            <div style={{fontSize:11, color:T.muted, marginBottom:4}}>
+                              <span style={{fontWeight:600}}>Materiales: </span>
+                              {p.materiales.map(m=>`${m.desc||m.nombre||""} x${m.qty||m.cantidad||1}`).join(" · ")}
+                            </div>
+                          )}
+                          <div style={{display:"flex", gap:12, fontSize:12, marginTop:4}}>
+                            {p.importe_mo>0 && <span style={{color:T.muted}}>MO: <b style={{color:T.text}}>{p.importe_mo.toFixed(2)}€</b></span>}
+                            {p.importe_materiales>0 && <span style={{color:T.muted}}>Mat: <b style={{color:T.text}}>{p.importe_materiales.toFixed(2)}€</b></span>}
+                            {p.importe_total>0 && <span style={{color:T.accent, fontWeight:700}}>{p.importe_total.toFixed(2)}€</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }
@@ -6861,6 +7067,7 @@ export default function App() {
   const [selectedCliente, setSelectedCliente] = useState(null);
   const [selectedPresupuesto, setSelectedPresupuesto] = useState(null);
   const [selectedInstalacion, setSelectedInstalacion] = useState(null);
+  const [selectedMant, setSelectedMant] = useState(null);
   const [isOnline, setIsOnline]     = useState(navigator.onLine);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("blch-darkmode") === "true");
   const isMobile = useIsMobile();
@@ -7026,7 +7233,7 @@ export default function App() {
         <div style={{ flex:1, minWidth:0, paddingTop:isMobile?52:0, paddingBottom:isMobile?70:0, overflowY:"auto", minHeight:"100vh" }}>
           {view==="dashboard" &&isAdmin&&<Dashboard data={data} setView={setView} techs={techs}/>}
           {view==="calendario" &&<CalendarView data={data} refresh={loadAll} user={user}/>}
-          {view==="avisos" &&<AvisosView data={data} user={user} onSelect={setSelected} techs={techs} refresh={loadAll} empresa={empresa}/>}
+          {view==="avisos" &&<AvisosView data={data} user={user} onSelect={setSelected} onSelectMant={setSelectedMant} techs={techs} refresh={loadAll} empresa={empresa}/>}
           {view==="presupuestos" &&<PresupuestosList data={data} refresh={loadAll} user={user} empresa={empresa}/>}
           {view==="clientes" &&isAdmin&&<ClientesList data={data} refresh={loadAll} user={user}/>}
           {view==="contratos" &&<MantenimientoView data={data} user={user} refresh={loadAll} empresa={empresa}/>}
@@ -7036,9 +7243,10 @@ export default function App() {
           {view==="instalaciones_obras"&&<InstalacionesObrasView data={data} user={user} techs={techs} refresh={loadAll} empresa={empresa}/>}
         </div>
         {selected&&<AveriaDetalle averia={selected} data={data} user={user} techs={techs} empresa={empresa} refresh={loadAll} onClose={()=>setSelected(null)}/>}
-        {selectedCliente&&<ClienteDetalle cliente={selectedCliente} data={data} refresh={loadAll} onClose={()=>setSelectedCliente(null)} onSelectAveria={a=>{setSelectedCliente(null);setTimeout(()=>setSelected(a),50);}} onSelectPresu={p=>{setSelectedCliente(null);setTimeout(()=>setSelectedPresupuesto(p),50);}}/>}
+        {selectedCliente&&<ClienteDetalle cliente={selectedCliente} data={data} refresh={loadAll} onClose={()=>setSelectedCliente(null)} onSelectAveria={a=>{setSelectedCliente(null);setTimeout(()=>setSelected(a),50);}} onSelectPresu={p=>{setSelectedCliente(null);setTimeout(()=>setSelectedPresupuesto(p),50);}} onSelectMant={m=>{setSelectedCliente(null);setTimeout(()=>setSelectedMant(m),50);}} onSelectInst={i=>{setSelectedCliente(null);setTimeout(()=>setSelectedInstalacion(i),50);}}/>}
         {selectedPresupuesto&&<PresupuestoDetalle pres={selectedPresupuesto} data={data} user={user} refresh={()=>{loadAll();setSelectedPresupuesto(null);}} empresa={empresa} onClose={()=>setSelectedPresupuesto(null)}/>}
         {selectedInstalacion&&<ObraDetalle obra={selectedInstalacion} data={data} user={user} techs={techs} empresa={empresa} refresh={loadAll} onClose={()=>setSelectedInstalacion(null)}/>}
+        {selectedMant&&<MantenimientoDetalle mant={selectedMant} data={data} user={user} techs={techs} empresa={empresa} refresh={loadAll} onClose={()=>setSelectedMant(null)}/>}
 
         {/* Buscador global */}
         {showSearch && (
