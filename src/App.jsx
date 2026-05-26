@@ -724,6 +724,7 @@ function AveriaDetalle({ averia:initA, data, user, techs, empresa, refresh, onCl
   const [fotos, setFotos]     = useState([]);
   const [nota, setNota]       = useState("");
   const [showParte, setShowParte] = useState(false);
+  const [showEquipoHistorial, setShowEquipoHistorial] = useState(false);
   const fileRef = useRef();
   const notaRef = useRef();
   const [voiceActive, setVoiceActive] = useState(false);
@@ -731,6 +732,7 @@ function AveriaDetalle({ averia:initA, data, user, techs, empresa, refresh, onCl
   const cl = (data.clientes||[]).find(c=>c.id===averia.cliente_id);
   const tc = (techs||[]).find(t=>t.id===averia.tecnico_id);
   const s  = BS[averia.status];
+  const equipoVinculado = averia.equipo_id ? (data.equipos||[]).find(eq=>eq.id===averia.equipo_id) : null;
 
   useEffect(()=>{ loadNotas(); loadPartes(); loadFotos(); },[averia.id]);
 
@@ -904,6 +906,20 @@ function AveriaDetalle({ averia:initA, data, user, techs, empresa, refresh, onCl
               </Field>
             )}
 
+            {equipoVinculado && (
+              <button
+                onClick={()=>setShowEquipoHistorial(true)}
+                style={{
+                  marginTop:8, padding:"7px 14px", borderRadius:8,
+                  border:"1.5px solid "+T.accent+"40",
+                  background:T.accentLight, color:T.accent,
+                  fontSize:12, fontWeight:600, cursor:"pointer",
+                  width:"100%", textAlign:"center"
+                }}>
+                Ver historial técnico — {equipoVinculado.nombre}
+              </button>
+            )}
+
             {/* Partes compactos */}
             {partes.map(p=>{
               const h=(p.hora_inicio&&p.hora_fin)?(()=>{ const [h1,m1]=p.hora_inicio.split(":").map(Number),[h2,m2]=p.hora_fin.split(":").map(Number); return Math.max(0,((h2*60+m2)-(h1*60+m1))/60); })():0;
@@ -966,6 +982,14 @@ function AveriaDetalle({ averia:initA, data, user, techs, empresa, refresh, onCl
       </div>
 
       {showParte&&<ParteModal averia={averia} cliente={cl} user={user} empresa={empresa} profiles={data.profiles} materiales={data.materiales||[]} refresh={()=>{loadPartes();refresh?.();}} onClose={()=>setShowParte(false)}/>}
+      {showEquipoHistorial && equipoVinculado && (
+        <EquipoDetalle
+          equipo={equipoVinculado}
+          data={data}
+          refresh={refresh}
+          onClose={()=>setShowEquipoHistorial(false)}
+        />
+      )}
     </Modal>
   );
 }
@@ -3713,7 +3737,7 @@ function NuevoEquipoModal({ clienteId, onSave, onClose }) {
 function EquipoDetalle({ equipo, data, refresh, onClose }) {
   const isMobile = useIsMobile();
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({...equipo});
+  const [form, setForm] = useState({...equipo, garantia_hasta:equipo.garantia_hasta||"", notas_tecnicas:equipo.notas_tecnicas||""});
   const upd = (k,v) => setForm(p=>({...p,[k]:v}));
 
   // Averías vinculadas directamente + partes asociados
@@ -3731,6 +3755,7 @@ function EquipoDetalle({ equipo, data, refresh, onClose }) {
       nombre:form.nombre, marca:form.marca, modelo:form.modelo,
       numero_serie:form.numero_serie, año_instalacion:form.año_instalacion?parseInt(form.año_instalacion):null,
       direccion:form.direccion, ubicacion:form.ubicacion, notas:form.notas,
+      garantia_hasta:form.garantia_hasta||null, notas_tecnicas:form.notas_tecnicas||null,
     }).eq("id",equipo.id);
     if(!error) { refresh?.(); setEditing(false); }
     else alert("Error: "+error.message);
@@ -3766,6 +3791,8 @@ function EquipoDetalle({ equipo, data, refresh, onClose }) {
               ))}
             </div>
             {equipo.notas&&<div style={{ fontSize:13,color:T.sub,fontStyle:"italic",borderTop:`1px solid ${T.border}`,paddingTop:10 }}>{equipo.notas}</div>}
+            {equipo.garantia_hasta && <Field label="Garantía hasta">{new Date(equipo.garantia_hasta).toLocaleDateString("es-ES")}</Field>}
+            {equipo.notas_tecnicas && <Field label="Notas técnicas">{equipo.notas_tecnicas}</Field>}
             <div style={{ display:"flex",gap:8,marginTop:12 }}>
               <Btn ch="Editar" onClick={()=>setEditing(true)} v="g" sm/>
               <Btn ch="Eliminar equipo" onClick={eliminar} v="d" sm/>
@@ -3783,6 +3810,12 @@ function EquipoDetalle({ equipo, data, refresh, onClose }) {
             <Field label="Dirección"><input value={form.direccion||""} onChange={e=>upd("direccion",e.target.value)} style={inp()}/></Field>
             <Field label="Ubicación"><input value={form.ubicacion||""} onChange={e=>upd("ubicacion",e.target.value)} style={inp()}/></Field>
             <Field label="Notas"><textarea value={form.notas||""} onChange={e=>upd("notas",e.target.value)} style={{...inp(),minHeight:55,resize:"vertical"}}/></Field>
+            <Field label="Garantía hasta">
+              <input type="date" value={form.garantia_hasta} onChange={e=>setForm(p=>({...p,garantia_hasta:e.target.value}))} style={inp()}/>
+            </Field>
+            <Field label="Notas técnicas">
+              <textarea value={form.notas_tecnicas} onChange={e=>setForm(p=>({...p,notas_tecnicas:e.target.value}))} style={{...inp(),minHeight:80}} placeholder="Observaciones técnicas del equipo"/>
+            </Field>
             <div style={{ display:"flex",gap:8,justifyContent:"flex-end" }}>
               <Btn ch="Cancelar" onClick={()=>setEditing(false)} v="g"/>
               <Btn ch="Guardar" onClick={save}/>
@@ -3790,30 +3823,69 @@ function EquipoDetalle({ equipo, data, refresh, onClose }) {
           </div>
         )}
 
-        {/* Historial completo */}
-        <div>
-          <div style={{ fontSize:12,fontWeight:700,color:T.sub,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:10 }}>
-            Historial de intervenciones ({averias.length})
-          </div>
-          {averias.length===0 ? (
-            <div style={{ textAlign:"center",padding:"30px",color:T.muted,fontSize:13,background:T.surface,borderRadius:10,border:`2px dashed ${T.border}` }}>
-              Sin intervenciones vinculadas. Ve a una avería y selecciona este equipo en "Equipo vinculado".
-            </div>
-          ) : (
-            <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
-              {averias.map(b=>{ const s=BS[b.status]; return (
-                <div key={b.id} style={{ background:T.card,border:`1px solid ${T.border}`,borderLeft:`3px solid ${s?.color||T.muted}`,borderRadius:9,padding:"12px 14px" }}>
-                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,marginBottom:6 }}>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:12,fontWeight:600,color:T.text,marginBottom:2 }}>{b.descripcion}</div>
-                      <div style={{ fontSize:11,color:T.muted }}>{b.fecha_visita?.split("-").reverse().join("/")} · {b.equipo}</div>
+        {/* Timeline técnico */}
+        <div style={{marginTop:16}}>
+          <div style={{fontSize:11,fontWeight:700,color:T.muted,letterSpacing:1,marginBottom:10}}>HISTORIAL TÉCNICO</div>
+          {(()=>{
+            const eventos = [
+              ...(data.equipo_eventos||[]).filter(e=>e.equipo_id===equipo.id),
+              ...(data.averias||[]).filter(a=>a.equipo_id===equipo.id).map(a=>({
+                id:"av_"+a.id, tipo:"averia", titulo:a.descripcion,
+                tecnico_nombre:a.tecnico_nombre||"", fecha:a.created_at,
+                descripcion: "Estado: "+(BS[a.status]?.label||a.status||"")
+              })),
+              ...(data.mantenimientos||[]).filter(m=>m.equipo_id===equipo.id).map(m=>({
+                id:"mt_"+m.id, tipo:"mantenimiento", titulo:m.descripcion,
+                tecnico_nombre:m.tecnico_nombre||"", fecha:m.created_at,
+                descripcion: "Estado: "+(MS[m.status]?.label||m.status||"")
+              })),
+              ...(data.presupuestos||[]).filter(p=>p.equipo_id===equipo.id).map(p=>({
+                id:"pr_"+p.id, tipo:"presupuesto", titulo:p.descripcion,
+                tecnico_nombre:"", fecha:p.created_at,
+                descripcion: (PS[p.status]?.label||p.status||"")+(p.importe?" · "+p.importe.toFixed(2)+"€":"")
+              })),
+            ].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+
+            if(eventos.length===0) return (
+              <div style={{textAlign:"center",padding:"30px 20px",color:T.muted,fontSize:13,
+                background:T.surface,borderRadius:10,border:`2px dashed ${T.border}`}}>
+                Sin historial técnico registrado
+              </div>
+            );
+
+            const cfg = {
+              averia:        {color:T.red,    label:"Avería"},
+              mantenimiento: {color:T.accent, label:"Mantenimiento"},
+              presupuesto:   {color:T.purple, label:"Presupuesto"},
+              parte:         {color:T.green,  label:"Parte"},
+              observacion:   {color:T.muted,  label:"Observación"},
+            };
+
+            return eventos.map(ev=>{
+              const c = cfg[ev.tipo]||{color:T.muted,label:ev.tipo};
+              return (
+                <div key={ev.id} style={{display:"flex",gap:12,marginBottom:12}}>
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:0}}>
+                    <div style={{width:10,height:10,borderRadius:"50%",background:c.color,flexShrink:0,marginTop:4}}/>
+                    <div style={{width:2,flex:1,background:T.border,marginTop:4}}/>
+                  </div>
+                  <div style={{flex:1,paddingBottom:12}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                      <div>
+                        <span style={{fontSize:11,fontWeight:700,color:c.color}}>{c.label}</span>
+                        {ev.tecnico_nombre && <span style={{fontSize:11,color:T.muted,marginLeft:8}}>{ev.tecnico_nombre}</span>}
+                      </div>
+                      <span style={{fontSize:11,color:T.muted,whiteSpace:"nowrap"}}>
+                        {new Date(ev.fecha).toLocaleDateString("es-ES")}
+                      </span>
                     </div>
-                    <span style={{ fontSize:10,padding:"2px 8px",borderRadius:20,background:(s?.color||T.muted)+"15",color:s?.color||T.muted,fontWeight:600,whiteSpace:"nowrap" }}>{s?.label||b.status}</span>
+                    {ev.titulo && <div style={{fontSize:13,color:T.text,marginTop:2,lineHeight:1.4}}>{ev.titulo}</div>}
+                    {ev.descripcion && <div style={{fontSize:12,color:T.muted,marginTop:2}}>{ev.descripcion}</div>}
                   </div>
                 </div>
-              ); })}
-            </div>
-          )}
+              );
+            });
+          })()}
         </div>
 
       </div>
@@ -3908,276 +3980,328 @@ function ClienteDetalle({ cliente, data, refresh, onClose, onSelectAveria, onSel
 
   return (
     <Modal onClose={onClose} w={680}>
-      {/* Cabecera */}
-      <div style={{ padding:"18px 20px 0", borderBottom:`1px solid ${T.border}` }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <Ava name={cliente.nombre} size={44}/>
-            <div>
-              <div style={{ fontSize:17, fontWeight:700, color:T.text, fontFamily:"'Sora',sans-serif" }}>{cliente.nombre}</div>
-              {cliente.telefono&&<a href={`tel:${cliente.telefono}`} style={{ fontSize:13,color:T.green,textDecoration:"none",fontWeight:500 }}>{cliente.telefono}</a>}
-              {cliente.email&&<div style={{ fontSize:12,color:T.muted }}>{cliente.email}</div>}
+      {/* CABECERA */}
+      <div style={{padding: isMobile?"16px 16px 12px":"20px 24px 16px", borderBottom:`1px solid ${T.border}`}}>
+        <div style={{display:"flex", alignItems:"flex-start", gap:12, marginBottom:12}}>
+          <div style={{width:44,height:44,borderRadius:12,background:T.accentLight,
+            display:"flex",alignItems:"center",justifyContent:"center",
+            fontSize:16,fontWeight:700,color:T.accent,flexShrink:0}}>
+            {(cliente.nombre||"?")[0].toUpperCase()}
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:700,fontSize:isMobile?16:18,color:T.text,lineHeight:1.2}}>
+              {cliente.nombre}{cliente.apellidos?" "+cliente.apellidos:""}
             </div>
+            {cliente.telefono && <div style={{fontSize:13,color:T.muted,marginTop:3}}>{cliente.telefono}</div>}
+            {cliente.direccion && <div style={{fontSize:12,color:T.muted,marginTop:2}}>{cliente.direccion}</div>}
+            {cliente.email && <div style={{fontSize:12,color:T.muted,marginTop:2}}>{cliente.email}</div>}
+            {cliente.dni && <div style={{fontSize:12,color:T.muted,marginTop:2}}>{cliente.dni}</div>}
           </div>
-          <div style={{ display:"flex", gap:6 }}>
-            {cliente.telefono&&<a href={`https://wa.me/34${cliente.telefono.replace(/\s/g,"")}`} target="_blank" rel="noreferrer" style={{ width:34,height:34,borderRadius:8,background:T.greenLight,border:"1.5px solid "+T.border,display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none" }}><svg width="15" height="15" viewBox="0 0 24 24" fill={T.green}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>}
-            {cliente.telefono&&<a href={`tel:${cliente.telefono}`} style={{ width:34,height:34,borderRadius:8,background:T.greenLight,border:"1.5px solid "+T.border,display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.green} strokeWidth="2" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg></a>}
-            {cliente.direccion&&<button onClick={()=>openMaps(cliente.direccion)} style={{ width:34,height:34,borderRadius:8,background:T.accentLight,border:"1.5px solid "+T.accent+"40",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></button>}
-            <BtnContacto cliente={cliente} size={34}/>
-            <button onClick={onClose} style={{ width:34,height:34,borderRadius:8,background:T.surface,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:18,color:T.muted }}>×</button>
-          </div>
+          <button onClick={onClose} style={{background:"none",border:"none",
+            cursor:"pointer",color:T.muted,fontSize:20,padding:4,flexShrink:0}}>✕</button>
         </div>
-        {/* Tabs */}
-        <div style={{ display:"flex", gap:6, overflowX:"auto" }}>
-          {tabs.map(t=><button key={t.k} onClick={()=>setTab(t.k)}
-            style={{ padding:"7px 14px",borderRadius:8,border:`1px solid ${tab===t.k?T.accent:T.border}`,background:tab===t.k?T.accentLight:T.card,color:tab===t.k?T.accent:T.sub,fontSize:12,fontWeight:tab===t.k?700:400,cursor:"pointer",whiteSpace:"nowrap",marginBottom:10,fontFamily:"'DM Sans',sans-serif" }}>
-            {t.l}
-          </button>)}
+        {/* Botones contacto */}
+        <div style={{display:"flex",gap:8}}>
+          {cliente.telefono && <>
+            <a href={"https://wa.me/"+cliente.telefono.replace(/\D/g,"")}
+              target="_blank" rel="noopener noreferrer"
+              style={{width:36,height:36,borderRadius:9,background:T.greenLight,
+                border:"1.5px solid "+T.green,display:"flex",alignItems:"center",
+                justifyContent:"center",textDecoration:"none"}}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill={T.green}>
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                <path d="M12 0C5.373 0 0 5.373 0 12c0 2.021.502 3.927 1.385 5.604L0 24l6.545-1.371A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.032-1.387l-.361-.214-3.733.979.998-3.648-.235-.374A9.818 9.818 0 1112 21.818z"/>
+              </svg>
+            </a>
+            <a href={"tel:"+cliente.telefono}
+              style={{width:36,height:36,borderRadius:9,background:T.greenLight,
+                border:"1.5px solid "+T.green,display:"flex",alignItems:"center",
+                justifyContent:"center",textDecoration:"none"}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.green} strokeWidth="2">
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+              </svg>
+            </a>
+          </>}
+          {cliente.direccion && (
+            <button onClick={()=>window.open("https://maps.google.com/?q="+encodeURIComponent(cliente.direccion),"_blank")}
+              style={{width:36,height:36,borderRadius:9,background:T.accentLight,
+                border:"1.5px solid "+T.accent+"40",display:"flex",alignItems:"center",
+                justifyContent:"center",cursor:"pointer"}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
-      <div style={{ padding:"18px 20px 22px", overflowY:"auto" }}>
+      <div style={{overflowY:"auto", padding: isMobile?"12px 16px 24px":"16px 24px 24px",
+        display:"flex", flexDirection:"column", gap:16}}>
 
-        {/* ── INFO ── */}
-        {tab==="info" && (
-          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-            {!editing ? (
-              <>
-                <div style={{ background:T.surface,borderRadius:10,padding:"14px",border:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:8 }}>
-                  {cliente.direccion&&<div style={{ fontSize:13,color:T.text }}><span style={{ fontWeight:600,color:T.sub,fontSize:11 }}>DIRECCIÓN: </span>{cliente.direccion}</div>}
-                  {dni&&<div style={{ fontSize:13,color:T.text }}><span style={{ fontWeight:600,color:T.sub,fontSize:11 }}>DNI/NIF: </span>{dni}</div>}
-                  {tipo&&<div style={{ fontSize:13,color:T.text }}><span style={{ fontWeight:600,color:T.sub,fontSize:11 }}>INSTALACIÓN: </span>{tipo}</div>}
+        {!editing && (
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>setShowNuevoEquipo(true)}
+              style={{flex:1,padding:"10px",borderRadius:8,border:`1px solid ${T.border}`,
+                background:T.surface,color:T.text,cursor:"pointer",fontSize:13,fontWeight:600}}>
+              + Añadir equipo
+            </button>
+            <button onClick={()=>setTab("contratos")}
+              style={{flex:1,padding:"10px",borderRadius:8,border:`1px solid ${T.border}`,
+                background:T.surface,color:T.text,cursor:"pointer",fontSize:13,fontWeight:600}}>
+              + Añadir contrato
+            </button>
+          </div>
+        )}
+
+        {/* CONTADORES — averías, presupuestos, contratos */}
+        {!editing && (
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+            {[
+              { label:"Averías", count: (data.averias||[]).filter(a=>a.cliente_id===cliente.id&&!["cerrada","facturado"].includes(a.status)).length, color:T.red, key:"averias" },
+              { label:"Presupuestos", count: (data.presupuestos||[]).filter(p=>p.cliente_id===cliente.id&&["nuevo","enviado"].includes(p.status)).length, color:T.purple, key:"presu" },
+              { label:"Contratos", count: instalaciones.length, color:T.accent, key:"contratos" },
+            ].map(item=>(
+              <div key={item.key} onClick={()=>setTab(item.key)}
+                style={{background: tab===item.key ? item.color+"22" : T.surface,
+                  border:`1.5px solid ${tab===item.key ? item.color : T.border}`,
+                  borderRadius:12,padding:"14px 8px",textAlign:"center",cursor:"pointer",
+                  transition:"all 0.15s"}}>
+                <div style={{fontSize:isMobile?22:26,fontWeight:800,color:item.color,lineHeight:1}}>
+                  {item.count}
                 </div>
-                <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10 }}>
-                  {[["Averías",averias.length,T.accent],["Presupuestos",presupuestos.length,T.purple],["Contratos",instalaciones.length,T.teal]].map(([l,v,c])=>(
-                    <div key={l} style={{ background:c+"10",border:`1px solid ${c}20`,borderRadius:10,padding:"12px",textAlign:"center" }}>
-                      <div style={{ fontSize:28,fontWeight:700,color:c,fontFamily:"'Sora',sans-serif" }}>{v}</div>
-                      <div style={{ fontSize:11,color:T.muted,fontWeight:600 }}>{l}</div>
-                    </div>
-                  ))}
+                <div style={{fontSize:11,color:T.muted,marginTop:4,fontWeight:600}}>{item.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* CONTENIDO DE PESTAÑAS — solo cuando están activas */}
+        {tab==="averias" && !editing && (
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            <div style={{fontSize:11,fontWeight:700,color:T.muted,letterSpacing:1,marginBottom:4}}>AVERÍAS ACTIVAS</div>
+            {averias.filter(a=>!["cerrada","facturado"].includes(a.status)).length===0 ? (
+              <div style={{textAlign:"center",padding:"20px",color:T.muted,fontSize:13,
+                background:T.surface,borderRadius:10}}>Sin averías activas</div>
+            ) : averias.filter(a=>!["cerrada","facturado"].includes(a.status)).map(a=>(
+              <div key={a.id} onClick={()=>{onClose(); setTimeout(()=>onSelectAveria?.(a),50);}}
+                style={{background:T.surface,borderRadius:10,padding:"12px 14px",
+                  border:`1px solid ${T.border}`,cursor:"pointer"}}
+                onMouseEnter={e=>e.currentTarget.style.background=T.card}
+                onMouseLeave={e=>e.currentTarget.style.background=T.surface}>
+                <div style={{fontWeight:600,fontSize:13,color:T.text,marginBottom:4}}>{a.descripcion}</div>
+                <div style={{fontSize:11,color:T.muted,display:"flex",gap:8,alignItems:"center"}}>
+                  <span style={{padding:"1px 8px",borderRadius:20,background:T.red+"22",
+                    color:T.red,fontWeight:600}}>{BS[a.status]?.label||a.status}</span>
+                  <span>{new Date(a.created_at).toLocaleDateString("es-ES")}</span>
                 </div>
-                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                  <Btn ch="Editar datos" onClick={()=>setEditing(true)} v="g"/>
-                  <Btn ch="Historial" onClick={()=>{ setShowHistorial(true); cargarPartes(); }} v="s" sm/>
-                  {/* Portal */}
-                  {cliente.portal_token ? (
-                    <Btn ch="Copiar enlace portal" onClick={()=>{ navigator.clipboard.writeText(`${window.location.origin}/cliente/${cliente.portal_token}`); alert("Enlace copiado. Envíaselo al cliente."); }} v="s" sm/>
-                  ) : (
-                    <Btn ch="Activar portal cliente" onClick={async()=>{
-                      const token=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
-                      const {error}=await supabase.from("clientes").update({portal_token:token}).eq("id",cliente.id);
-                      if(!error){ refresh?.(); navigator.clipboard.writeText(`${window.location.origin}/cliente/${token}`); alert("Portal activado. Enlace copiado al portapapeles."); }
-                      else alert("Error: "+error.message);
-                    }} v="b" sm/>
-                  )}
-                  <Btn ch="Eliminar cliente" onClick={async()=>{
-                    if(!window.confirm(`¿Eliminar a ${cliente.nombre} y TODOS sus datos (averías, presupuestos, contratos, equipos)? Esta acción no se puede deshacer.`)) return;
-                    await supabase.from("partes").delete().in("averia_id",(data.averias||[]).filter(b=>b.cliente_id===cliente.id).map(b=>b.id));
-                    await supabase.from("notas_averias").delete().in("averia_id",(data.averias||[]).filter(b=>b.cliente_id===cliente.id).map(b=>b.id));
-                    await supabase.from("fotos_averias").delete().in("averia_id",(data.averias||[]).filter(b=>b.cliente_id===cliente.id).map(b=>b.id));
-                    await supabase.from("averias").delete().eq("cliente_id",cliente.id);
-                    await supabase.from("presupuestos").delete().eq("cliente_id",cliente.id);
-                    const instIds=(data.instalaciones||[]).filter(i=>i.cliente_id===cliente.id).map(i=>i.id);
-                    if(instIds.length>0) await supabase.from("revisiones").delete().in("instalacion_id",instIds);
-                    await supabase.from("instalaciones").delete().eq("cliente_id",cliente.id);
-                    await supabase.from("equipos").delete().eq("cliente_id",cliente.id);
-                    await supabase.from("eventos").delete().eq("cliente_id",cliente.id);
-                    await supabase.from("clientes").delete().eq("id",cliente.id);
-                    refresh?.(); onClose();
-                  }} v="d"/>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab==="presu" && !editing && (
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            <div style={{fontSize:11,fontWeight:700,color:T.muted,letterSpacing:1,marginBottom:4}}>PRESUPUESTOS ACTIVOS</div>
+            {presupuestos.filter(p=>["nuevo","enviado"].includes(p.status)).length===0 ? (
+              <div style={{textAlign:"center",padding:"20px",color:T.muted,fontSize:13,
+                background:T.surface,borderRadius:10}}>Sin presupuestos activos</div>
+            ) : presupuestos.filter(p=>["nuevo","enviado"].includes(p.status)).map(p=>(
+              <div key={p.id} onClick={()=>{onClose(); setTimeout(()=>onSelectPresu?.(p),50);}}
+                style={{background:T.surface,borderRadius:10,padding:"12px 14px",
+                  border:`1px solid ${T.border}`,cursor:"pointer"}}
+                onMouseEnter={e=>e.currentTarget.style.background=T.card}
+                onMouseLeave={e=>e.currentTarget.style.background=T.surface}>
+                <div style={{fontWeight:600,fontSize:13,color:T.text,marginBottom:4}}>{p.descripcion}</div>
+                <div style={{fontSize:11,color:T.muted,display:"flex",gap:8,alignItems:"center",justifyContent:"space-between"}}>
+                  <span style={{padding:"1px 8px",borderRadius:20,background:T.purple+"22",
+                    color:T.purple,fontWeight:600}}>{PS[p.status]?.label||p.status}</span>
+                  {p.importe>0 && <span style={{fontWeight:700,color:T.text}}>{p.importe.toFixed(2)}€</span>}
                 </div>
-              </>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab==="contratos" && !editing && (
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            <div style={{fontSize:11,fontWeight:700,color:T.muted,letterSpacing:1,marginBottom:4}}>CONTRATOS ACTIVOS</div>
+            {instalaciones.length===0 ? (
+              <div style={{textAlign:"center",padding:"20px",color:T.muted,fontSize:13,
+                background:T.surface,borderRadius:10}}>Sin contratos activos</div>
+            ) : instalaciones.map(i=>(
+              <div key={i.id} style={{background:T.surface,borderRadius:10,padding:"12px 14px",
+                border:`1px solid ${T.border}`}}>
+                <div style={{fontWeight:600,fontSize:13,color:T.text,marginBottom:4}}>{i.nombre}</div>
+                <div style={{fontSize:11,color:T.muted}}>{i.tipo||""}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* DATOS DEL CLIENTE — edición */}
+        {editing && (
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {[
+              {k:"nombre",l:"Nombre",pl:"Nombre del cliente"},
+              {k:"telefono",l:"Teléfono",pl:"Teléfono"},
+              {k:"email",l:"Email",pl:"Email",t:"email"},
+              {k:"direccion",l:"Dirección",pl:"Dirección completa"},
+              {k:"dni",l:"DNI/NIF",pl:"DNI o CIF"},
+            ].map(f=>(
+              <div key={f.k}>
+                <div style={{fontSize:11,color:T.muted,marginBottom:4,fontWeight:600}}>{f.l}</div>
+                <input type={f.t||"text"} value={form[f.k]||""} placeholder={f.pl}
+                  onChange={e=>upd(f.k,e.target.value)} style={inp()}/>
+              </div>
+            ))}
+            <div style={{display:"flex",gap:8,marginTop:4}}>
+              <button onClick={()=>setEditing(false)}
+                style={{flex:1,padding:"10px",borderRadius:8,border:`1px solid ${T.border}`,
+                  background:T.surface,color:T.text,cursor:"pointer",fontSize:13}}>Cancelar</button>
+              <button onClick={save}
+                style={{flex:1,padding:"10px",borderRadius:8,border:"none",
+                  background:T.accent,color:"#fff",cursor:"pointer",fontSize:13,fontWeight:600}}>Guardar</button>
+            </div>
+          </div>
+        )}
+
+        {/* INFO BÁSICA — visible cuando no está editando y no hay pestaña activa */}
+        {!editing && tab==="info" && (
+          <div style={{background:T.surface,borderRadius:10,padding:"12px 14px",
+            border:`1px solid ${T.border}`}}>
+            {cliente.email && <div style={{fontSize:13,color:T.text,marginBottom:6}}>
+              <span style={{color:T.muted,fontSize:11,fontWeight:600}}>EMAIL </span>{cliente.email}
+            </div>}
+            {cliente.dni && <div style={{fontSize:13,color:T.text,marginBottom:6}}>
+              <span style={{color:T.muted,fontSize:11,fontWeight:600}}>DNI/NIF </span>{cliente.dni}
+            </div>}
+            {cliente.notas && <div style={{fontSize:13,color:T.text}}>
+              <span style={{color:T.muted,fontSize:11,fontWeight:600}}>NOTAS </span>{cliente.notas}
+            </div>}
+          </div>
+        )}
+
+        {/* BOTONES DE ACCIÓN */}
+        {!editing && (
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+            <button onClick={()=>setEditing(true)}
+              style={{padding:"8px 16px",borderRadius:8,border:`1px solid ${T.border}`,
+                background:T.surface,color:T.text,cursor:"pointer",fontSize:13,fontWeight:600}}>
+              Editar datos
+            </button>
+            <button onClick={()=>setTab("equipos")}
+              style={{padding:"8px 16px",borderRadius:8,border:`1px solid ${T.accent}40`,
+                background:T.accentLight,color:T.accent,cursor:"pointer",fontSize:13,fontWeight:600}}>
+              Historial equipos
+            </button>
+            <button onClick={()=>{ setShowHistorial(true); cargarPartes(); }}
+              style={{padding:"8px 16px",borderRadius:8,border:"none",
+                background:T.accent,color:"#fff",cursor:"pointer",fontSize:13,fontWeight:600}}>
+              Historial cliente
+            </button>
+            {cliente.portal_token ? (
+              <button onClick={()=>{
+                navigator.clipboard.writeText(window.location.origin+"/portal/"+cliente.portal_token);
+                alert("Enlace copiado");
+              }} style={{padding:"8px 16px",borderRadius:8,border:`1px solid ${T.border}`,
+                background:T.surface,color:T.text,cursor:"pointer",fontSize:13}}>
+                Copiar enlace portal
+              </button>
             ) : (
-              <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
-                <Field label="Nombre *"><input value={form.nombre} onChange={e=>upd("nombre",e.target.value)} style={inp()}/></Field>
-                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
-                  <Field label="Teléfono"><input value={form.telefono||""} onChange={e=>upd("telefono",e.target.value)} style={inp()}/></Field>
-                  <Field label="Email"><input type="email" value={form.email||""} onChange={e=>upd("email",e.target.value)} style={inp()}/></Field>
-                  <Field label="DNI / NIF / CIF"><input value={form.dni||""} onChange={e=>upd("dni",e.target.value)} style={inp()} placeholder="12345678A"/></Field>
-                  <Field label="Tipo instalación"><input value={form.notas?.split("||TIPO:")[1]?.split("||")[0]||""} onChange={e=>{ const rest=(form.notas||"").replace(/\|\|TIPO:[^|]*/,""); upd("notas",e.target.value?rest+"||TIPO:"+e.target.value:rest); }} style={inp()} placeholder="Caldera + Split..."/></Field>
-                </div>
-                <Field label="Dirección"><input value={form.direccion||""} onChange={e=>upd("direccion",e.target.value)} style={inp()}/></Field>
-                <div style={{ display:"flex",gap:8,justifyContent:"flex-end" }}>
-                  <Btn ch="Cancelar" onClick={()=>setEditing(false)} v="g"/>
-                  <Btn ch="Guardar" onClick={save}/>
-                </div>
-              </div>
+              <button onClick={async()=>{
+                const token = Math.random().toString(36).slice(2);
+                await supabase.from("clientes").update({portal_token:token}).eq("id",cliente.id);
+                refresh?.();
+              }} style={{padding:"8px 16px",borderRadius:8,border:`1px solid ${T.accent}40`,
+                background:T.accentLight,color:T.accent,cursor:"pointer",fontSize:13}}>
+                Activar portal cliente
+              </button>
             )}
+            <button onClick={async()=>{
+              if(!window.confirm("¿Eliminar cliente y todos sus datos?")) return;
+              const id = cliente.id;
+              await supabase.from("partes").delete().in("averia_id",(data.averias||[]).filter(a=>a.cliente_id===id).map(a=>a.id));
+              await supabase.from("averias").delete().eq("cliente_id",id);
+              await supabase.from("presupuestos").delete().eq("cliente_id",id);
+              await supabase.from("revisiones").delete().eq("cliente_id",id);
+              await supabase.from("instalaciones").delete().eq("cliente_id",id);
+              await supabase.from("equipos").delete().eq("cliente_id",id);
+              await supabase.from("eventos").delete().eq("cliente_id",id);
+              await supabase.from("clientes").delete().eq("id",id);
+              refresh?.(); onClose();
+            }} style={{padding:"8px 16px",borderRadius:8,border:`1px solid ${T.red}40`,
+              background:T.redLight,color:T.red,cursor:"pointer",fontSize:13,fontWeight:600}}>
+              Eliminar cliente
+            </button>
           </div>
         )}
-
-        {/* ── AVERÍAS ── */}
-        {tab==="averias" && (
-          <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
-            {averias.length===0&&<div style={{ textAlign:"center",padding:"40px 0",color:T.muted,fontSize:13 }}>Sin averías registradas</div>}
-            {averias.map(b=>{ const s=BS[b.status]; return (
-              <div key={b.id} onClick={()=>onSelectAveria&&onSelectAveria(b)} style={{ background:T.card,border:`1px solid ${T.border}`,borderLeft:`4px solid ${s?.color||T.muted}`,borderRadius:10,padding:"12px 14px",cursor:"pointer",transition:"all 0.15s" }} onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)";e.currentTarget.style.transform="translateY(-1px)";}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="none";e.currentTarget.style.transform="translateY(0)";}}>
-                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10 }}>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:13,fontWeight:600,color:T.text,marginBottom:4 }}>{b.descripcion}</div>
-                    <div style={{ fontSize:11,color:T.muted }}>{b.equipo} · {b.fecha_visita}</div>
-                  </div>
-                  <span style={{ padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:(s?.color||T.muted)+"15",color:s?.color||T.muted,whiteSpace:"nowrap" }}>{s?.label||b.status}</span>
-                </div>
-              </div>
-            ); })}
-          </div>
-        )}
-
-        {/* ── PRESUPUESTOS ── */}
-        {tab==="presu" && (
-          <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
-            {presupuestos.length===0&&<div style={{ textAlign:"center",padding:"40px 0",color:T.muted,fontSize:13 }}>Sin presupuestos registrados</div>}
-            {presupuestos.map(p=>{ const s=PS[p.status]; return (
-              <div key={p.id} onClick={()=>onSelectPresu&&onSelectPresu(p)} style={{ background:T.card,border:`1px solid ${T.border}`,borderLeft:`4px solid ${s?.color||T.muted}`,borderRadius:10,padding:"12px 14px",cursor:"pointer",transition:"all 0.15s" }} onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)";e.currentTarget.style.transform="translateY(-1px)";}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="none";e.currentTarget.style.transform="translateY(0)";}}>
-                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10 }}>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:13,fontWeight:600,color:T.text,marginBottom:4 }}>{p.descripcion}</div>
-                    {p.notas&&<div style={{ fontSize:11,color:T.muted }}>{p.notas}</div>}
-                  </div>
-                  <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4 }}>
-                    <span style={{ fontSize:15,fontWeight:700,color:T.accent,fontFamily:"'Sora',sans-serif" }}>{(p.importe||0).toFixed(2)} €</span>
-                    <span style={{ padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:(s?.color||T.muted)+"15",color:s?.color||T.muted }}>{s?.label||p.status}</span>
-                  </div>
-                </div>
-              </div>
-            ); })}
-          </div>
-        )}
-
-        {/* ── EQUIPOS ── */}
-        {tab==="equipos" && (
-          <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
-            <div style={{ display:"flex",justifyContent:"flex-end" }}>
-              <Btn ch="+ Nuevo equipo" onClick={()=>setShowNuevoEquipo(true)} sm/>
-            </div>
-            {equipos.length===0 && (
-              <div onClick={()=>setShowNuevoEquipo(true)} style={{ textAlign:"center",padding:"40px 20px",color:T.muted,fontSize:13,background:T.surface,borderRadius:10,border:`2px dashed ${T.border}`,cursor:"pointer" }}>
-                Sin equipos registrados. Pulsa para añadir uno.
-              </div>
-            )}
-            {equipos.map(eq=>(
-              <div key={eq.id} onClick={()=>setSelEquipo(eq)}
-                style={{ background:T.card,border:`1px solid ${T.border}`,borderRadius:10,padding:"14px 16px",cursor:"pointer",transition:"all 0.15s" }}
-                onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)";e.currentTarget.style.transform="translateY(-1px)";}}
-                onMouseLeave={e=>{e.currentTarget.style.boxShadow="none";e.currentTarget.style.transform="translateY(0)";}}>
-                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start" }}>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:14,fontWeight:700,color:T.text,marginBottom:4 }}>{eq.nombre}</div>
-                    <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
-                      {eq.marca&&<span style={{ fontSize:11,color:T.sub }}>{eq.marca}</span>}
-                      {eq.modelo&&<><span style={{ color:T.border }}>·</span><span style={{ fontSize:11,color:T.sub }}>{eq.modelo}</span></>}
-                      {eq.año_instalacion&&<><span style={{ color:T.border }}>·</span><span style={{ fontSize:11,color:T.muted }}>Inst. {eq.año_instalacion}</span></>}
-                    </div>
-                    {eq.ubicacion&&<div style={{ fontSize:11,color:T.muted,marginTop:4 }}>{eq.ubicacion}</div>}
-                  </div>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2" strokeLinecap="round"><polyline points="9,18 15,12 9,6"/></svg>
-                </div>
-              </div>
-            ))}
-            {showNuevoEquipo&&<NuevoEquipoModal clienteId={cliente.id} onSave={()=>refresh?.()} onClose={()=>setShowNuevoEquipo(false)}/>}
-            {selEquipo&&<EquipoDetalle equipo={selEquipo} data={data} refresh={()=>{ refresh?.(); setSelEquipo(null); }} onClose={()=>setSelEquipo(null)}/>}
-          </div>
-        )}
-
-        {/* ── CONTRATOS ── */}
-        {tab==="contratos" && (
-          <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
-            {instalaciones.length===0&&<div style={{ textAlign:"center",padding:"40px 0",color:T.muted,fontSize:13 }}>Sin instalaciones registradas</div>}
-            {instalaciones.map(i=>(
-              <div key={i.id} onClick={()=>setSelInst(i)} style={{ background:T.card,border:`1px solid ${T.border}`,borderRadius:10,padding:"12px 14px",cursor:"pointer",transition:"all 0.15s" }} onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)";e.currentTarget.style.transform="translateY(-1px)";}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="none";e.currentTarget.style.transform="translateY(0)";}}>
-                <div style={{ fontSize:13,fontWeight:600,color:T.text,marginBottom:8 }}>{i.nombre}</div>
-                <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
-                  {MT_TIPOS.map(t=>{ if(!i["activa_"+t]) return null; const mt=MT[t]; const inf=urgInfo(i["proxima_"+t]||null); return (
-                    <div key={t} style={{ display:"flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:20,background:mt.color+"12",border:`1px solid ${mt.color}25` }}>
-                      <span style={{ fontSize:11,fontWeight:600,color:mt.color }}>{mt.label}</span>
-                      <span style={{ fontSize:10,color:UCOL[inf.level],fontWeight:600 }}>{inf.label}</span>
-                    </div>
-                  ); })}
-                </div>
-                {i.tipo&&<div style={{ fontSize:11,color:T.muted,marginTop:6 }}>Equipo: {i.tipo}</div>}
-                {i.ubicacion&&<div style={{ fontSize:11,color:T.muted }}>Ubicación: {i.ubicacion}</div>}
-              </div>
-            ))}
-          </div>
-        )}
-
       </div>
 
-      {showHistorial && (
-        <div style={{ position:"fixed", top:0, right:0, width:"min(420px,100vw)", height:"100vh",
-                      background:T.card, borderLeft:`1px solid ${T.border}`, zIndex:1100,
-                      display:"flex", flexDirection:"column", boxShadow:"-4px 0 24px #0004" }}>
+      {/* Modales hijos */}
+      {showNuevoEquipo && (
+        <NuevoEquipoModal clienteId={cliente.id} onSave={()=>refresh?.()} onClose={()=>setShowNuevoEquipo(false)}/>
+      )}
+      {selEquipo && (
+        <EquipoDetalle equipo={selEquipo} data={data} refresh={()=>{refresh?.();setSelEquipo(null);}} onClose={()=>setSelEquipo(null)}/>
+      )}
 
-          {/* Cabecera */}
-          <div style={{ padding:"18px 20px", borderBottom:`1px solid ${T.border}`,
-                        display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+      {/* Panel historial */}
+      {showHistorial && (
+        <div style={{position:"fixed",top:0,right:0,width:"min(420px,100vw)",height:"100vh",
+          background:T.card,borderLeft:`1px solid ${T.border}`,zIndex:1100,
+          display:"flex",flexDirection:"column",boxShadow:"-4px 0 24px #0004"}}>
+          <div style={{padding:"18px 20px",borderBottom:`1px solid ${T.border}`,
+            display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div>
-              <div style={{ fontWeight:700, fontSize:16, color:T.text }}>Historial</div>
-              <div style={{ fontSize:12, color:T.muted }}>{cliente.nombre} {cliente.apellidos||""}</div>
+              <div style={{fontWeight:700,fontSize:16,color:T.text}}>Historial</div>
+              <div style={{fontSize:12,color:T.muted}}>{cliente.nombre} {cliente.apellidos||""}</div>
             </div>
             <button onClick={()=>setShowHistorial(false)}
-              style={{ background:"none", border:"none", cursor:"pointer", color:T.muted, fontSize:20 }}>✕</button>
+              style={{background:"none",border:"none",cursor:"pointer",color:T.muted,fontSize:20}}>✕</button>
           </div>
-
-          {/* Resumen financiero */}
-          <div style={{ padding:"14px 20px", borderBottom:`1px solid ${T.border}`,
-                        display:"flex", gap:12 }}>
+          <div style={{padding:"14px 20px",borderBottom:`1px solid ${T.border}`,display:"flex",gap:12}}>
             {[
-              { l:"Total facturado", v: historial.reduce((s,h)=>s+(h.importe||0),0) },
-              { l:"Registros", v: historial.length }
+              {l:"Total facturado",v:historial.reduce((s,h)=>s+(h.importe||0),0)},
+              {l:"Registros",v:historial.length}
             ].map(item=>(
-              <div key={item.l} style={{ flex:1, background:T.surface, borderRadius:10,
-                                         padding:"10px 14px", textAlign:"center" }}>
-                <div style={{ fontSize:11, color:T.muted, marginBottom:4 }}>{item.l}</div>
-                <div style={{ fontWeight:700, fontSize:15, color:T.text }}>
-                  {typeof item.v==="number" && item.l!=="Registros"
-                    ? item.v.toFixed(2)+"€" : item.v}
+              <div key={item.l} style={{flex:1,background:T.surface,borderRadius:10,
+                padding:"10px 14px",textAlign:"center"}}>
+                <div style={{fontSize:11,color:T.muted,marginBottom:4}}>{item.l}</div>
+                <div style={{fontWeight:700,fontSize:15,color:T.text}}>
+                  {typeof item.v==="number"&&item.l!=="Registros"?item.v.toFixed(2)+"€":item.v}
                 </div>
               </div>
             ))}
           </div>
-
-          {/* Timeline */}
-          <div style={{ flex:1, overflowY:"auto", padding:"16px 20px", display:"flex",
-                        flexDirection:"column", gap:10 }}>
-
+          <div style={{flex:1,overflowY:"auto",padding:"16px 20px",display:"flex",
+            flexDirection:"column",gap:10}}>
             {loadingPartes && <div style={{textAlign:"center",padding:20,color:T.muted,fontSize:13}}>Cargando...</div>}
-
             {!loadingPartes && historial.length===0 && (
               <div style={{textAlign:"center",color:T.muted,fontSize:13,marginTop:40}}>Sin registros históricos</div>
             )}
-
-            {historial.map(h => {
-              const cfg = {
-                averia:        { color:T.red,    label:"Avería" },
-                mantenimiento: { color:T.accent, label:"Mantenimiento" },
-                presupuesto:   { color:T.purple, label:"Presupuesto" },
-                instalacion:   { color:T.orange, label:"Instalación" },
+            {historial.map(h=>{
+              const cfg={
+                averia:{color:T.red,label:"Avería"},
+                mantenimiento:{color:T.accent,label:"Mantenimiento"},
+                presupuesto:{color:T.purple,label:"Presupuesto"},
+                instalacion:{color:T.orange,label:"Instalación"},
               }[h.tipo];
-
-              const estadoLabel = h.tipo==="averia" ? (BS[h.estado]?.label||h.estado)
-                : h.tipo==="mantenimiento" ? (MS[h.estado]?.label||h.estado)
-                : h.tipo==="presupuesto" ? (PS[h.estado]?.label||h.estado)
-                : h.estado||null;
-
-              const partesVinculados = partes.filter(p =>
-                (h.tipo==="averia" && p.averia_id === h.ref.id) ||
-                (h.tipo==="mantenimiento" && p.mantenimiento_id === h.ref.id) ||
-                (h.tipo==="instalacion" && p.instalacion_id === h.ref.id)
+              const estadoLabel=h.tipo==="averia"?(BS[h.estado]?.label||h.estado)
+                :h.tipo==="mantenimiento"?(MS[h.estado]?.label||h.estado)
+                :h.tipo==="presupuesto"?(PS[h.estado]?.label||h.estado)
+                :h.estado||null;
+              const partesVinculados=partes.filter(p=>
+                (h.tipo==="averia"&&p.averia_id===h.ref.id)||
+                (h.tipo==="mantenimiento"&&p.mantenimiento_id===h.ref.id)||
+                (h.tipo==="instalacion"&&p.instalacion_id===h.ref.id)
               );
-
-              const obraVinculada = h.tipo==="presupuesto"
-                ? (data.instalaciones_obras||[]).find(o => o.presupuesto_id === h.ref.id && ["pendiente_facturar","facturada"].includes(o.status))
-                : null;
-
-              const partesObra = obraVinculada
-                ? partes.filter(p => p.instalacion_id === obraVinculada.id)
-                : [];
-
+              const obraVinculada=h.tipo==="presupuesto"
+                ?(data.instalaciones_obras||[]).find(o=>o.presupuesto_id===h.ref.id&&["pendiente_facturar","facturada"].includes(o.status))
+                :null;
+              const partesObra=obraVinculada?partes.filter(p=>p.instalacion_id===obraVinculada.id):[];
               return (
-                <div key={h.id} style={{background:T.surface, borderRadius:12, padding:"14px 16px",
-                  border:`1px solid ${T.border}`, cursor:"pointer"}}
+                <div key={h.id} style={{background:T.surface,borderRadius:12,padding:"14px 16px",
+                  border:`1px solid ${T.border}`,cursor:"pointer"}}
                   onClick={()=>{
                     setShowHistorial(false);
                     if(h.tipo==="averia") onSelectAveria?.(h.ref);
@@ -4185,74 +4309,65 @@ function ClienteDetalle({ cliente, data, refresh, onClose, onSelectAveria, onSel
                     else if(h.tipo==="mantenimiento") onSelectMant?.(h.ref);
                     else if(h.tipo==="instalacion") onSelectInst?.(h.ref);
                   }}>
-
-                  {/* Cabecera del registro */}
-                  <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:6}}>
-                    <div style={{display:"flex", gap:8, alignItems:"center"}}>
-                      <div style={{width:8, height:8, borderRadius:"50%", background:cfg.color, flexShrink:0}}/>
-                      <span style={{fontSize:12, fontWeight:700, color:cfg.color}}>{cfg.label}</span>
-                      {estadoLabel && <span style={{fontSize:11, padding:"1px 8px", borderRadius:20,
-                        background:cfg.color+"22", color:cfg.color, fontWeight:600}}>{estadoLabel}</span>}
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:6}}>
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <div style={{width:8,height:8,borderRadius:"50%",background:cfg.color,flexShrink:0}}/>
+                      <span style={{fontSize:12,fontWeight:700,color:cfg.color}}>{cfg.label}</span>
+                      {estadoLabel&&<span style={{fontSize:11,padding:"1px 8px",borderRadius:20,
+                        background:cfg.color+"22",color:cfg.color,fontWeight:600}}>{estadoLabel}</span>}
                     </div>
-                    <span style={{fontSize:11, color:T.muted}}>{new Date(h.fecha).toLocaleDateString("es-ES")}</span>
+                    <span style={{fontSize:11,color:T.muted}}>{new Date(h.fecha).toLocaleDateString("es-ES")}</span>
                   </div>
-
-                  {/* Descripción del registro */}
-                  <div style={{fontSize:13, color:T.text, lineHeight:1.4, marginBottom: partesVinculados.length||obraVinculada ? 10 : 0}}>
+                  <div style={{fontSize:13,color:T.text,lineHeight:1.4,
+                    marginBottom:partesVinculados.length||obraVinculada?10:0}}>
                     {h.descripcion||"Sin descripción"}
                   </div>
-
-                  {/* Importe del registro si no tiene partes */}
-                  {h.importe>0 && partesVinculados.length===0 && !obraVinculada && (
-                    <div style={{fontSize:13, fontWeight:700, color:T.text}}>{h.importe.toFixed(2)}€</div>
+                  {h.importe>0&&partesVinculados.length===0&&!obraVinculada&&(
+                    <div style={{fontSize:13,fontWeight:700,color:T.text}}>{h.importe.toFixed(2)}€</div>
                   )}
-
-                  {/* Partes vinculados */}
-                  {partesVinculados.map(p => (
+                  {partesVinculados.map(p=>(
                     <div key={p.id} onClick={e=>e.stopPropagation()}
-                      style={{marginTop:8, paddingLeft:16, borderLeft:`2px solid ${T.border}`}}>
-                      <div style={{fontSize:11, fontWeight:600, color:T.muted, marginBottom:4}}>
-                        Parte — {p.fecha ? new Date(p.fecha).toLocaleDateString("es-ES") : ""}{p.tecnico_nombre ? " · "+p.tecnico_nombre : ""}
+                      style={{marginTop:8,paddingLeft:16,borderLeft:`2px solid ${T.border}`}}>
+                      <div style={{fontSize:11,fontWeight:600,color:T.muted,marginBottom:4}}>
+                        Parte — {p.fecha?new Date(p.fecha).toLocaleDateString("es-ES"):""}{p.tecnico_nombre?" · "+p.tecnico_nombre:""}
                       </div>
-                      {p.trabajo && <div style={{fontSize:12, color:T.text, lineHeight:1.4, marginBottom:4}}>{p.trabajo}</div>}
-                      {p.observaciones && <div style={{fontSize:11, color:T.muted, marginBottom:4}}>{p.observaciones}</div>}
-                      {(p.materiales||[]).length>0 && (
-                        <div style={{fontSize:11, color:T.muted, marginBottom:4}}>
+                      {p.trabajo&&<div style={{fontSize:12,color:T.text,lineHeight:1.4,marginBottom:4}}>{p.trabajo}</div>}
+                      {p.observaciones&&<div style={{fontSize:11,color:T.muted,marginBottom:4}}>{p.observaciones}</div>}
+                      {(p.materiales||[]).length>0&&(
+                        <div style={{fontSize:11,color:T.muted,marginBottom:4}}>
                           <span style={{fontWeight:600}}>Materiales: </span>
                           {p.materiales.map(m=>`${m.desc||m.nombre||""} x${m.qty||m.cantidad||1}`).join(" · ")}
                         </div>
                       )}
-                      <div style={{display:"flex", gap:12, fontSize:12, marginTop:4}}>
-                        {p.importe_mo>0 && <span style={{color:T.muted}}>MO: <b style={{color:T.text}}>{p.importe_mo.toFixed(2)}€</b></span>}
-                        {p.importe_materiales>0 && <span style={{color:T.muted}}>Mat: <b style={{color:T.text}}>{p.importe_materiales.toFixed(2)}€</b></span>}
-                        {p.importe_total>0 && <span style={{color:T.accent, fontWeight:700}}>{p.importe_total.toFixed(2)}€</span>}
+                      <div style={{display:"flex",gap:12,fontSize:12,marginTop:4}}>
+                        {p.importe_mo>0&&<span style={{color:T.muted}}>MO: <b style={{color:T.text}}>{p.importe_mo.toFixed(2)}€</b></span>}
+                        {p.importe_materiales>0&&<span style={{color:T.muted}}>Mat: <b style={{color:T.text}}>{p.importe_materiales.toFixed(2)}€</b></span>}
+                        {p.importe_total>0&&<span style={{color:T.accent,fontWeight:700}}>{p.importe_total.toFixed(2)}€</span>}
                       </div>
                     </div>
                   ))}
-
-                  {/* Instalación vinculada a presupuesto */}
-                  {obraVinculada && (
-                    <div style={{marginTop:8, paddingLeft:16, borderLeft:`2px solid ${T.orange}44`}}>
-                      <div style={{fontSize:11, fontWeight:600, color:T.orange, marginBottom:4}}>
-                        Instalación vinculada — {MS[obraVinculada.status]?.label||obraVinculada.status||""}
+                  {obraVinculada&&(
+                    <div style={{marginTop:8,paddingLeft:16,borderLeft:`2px solid ${T.orange}44`}}>
+                      <div style={{fontSize:11,fontWeight:600,color:T.orange,marginBottom:4}}>
+                        Instalación vinculada — {obraVinculada.status||""}
                       </div>
-                      {obraVinculada.descripcion && <div style={{fontSize:12, color:T.text, marginBottom:4}}>{obraVinculada.descripcion}</div>}
-                      {partesObra.map(p => (
-                        <div key={p.id} style={{marginTop:6, paddingLeft:12, borderLeft:`2px solid ${T.border}`}}>
-                          <div style={{fontSize:11, fontWeight:600, color:T.muted, marginBottom:2}}>
-                            Parte — {p.fecha ? new Date(p.fecha).toLocaleDateString("es-ES") : ""}{p.tecnico_nombre ? " · "+p.tecnico_nombre : ""}
+                      {obraVinculada.descripcion&&<div style={{fontSize:12,color:T.text,marginBottom:4}}>{obraVinculada.descripcion}</div>}
+                      {partesObra.map(p=>(
+                        <div key={p.id} style={{marginTop:6,paddingLeft:12,borderLeft:`2px solid ${T.border}`}}>
+                          <div style={{fontSize:11,fontWeight:600,color:T.muted,marginBottom:2}}>
+                            Parte — {p.fecha?new Date(p.fecha).toLocaleDateString("es-ES"):""}{p.tecnico_nombre?" · "+p.tecnico_nombre:""}
                           </div>
-                          {p.trabajo && <div style={{fontSize:12, color:T.text, lineHeight:1.4, marginBottom:4}}>{p.trabajo}</div>}
-                          {(p.materiales||[]).length>0 && (
-                            <div style={{fontSize:11, color:T.muted, marginBottom:4}}>
+                          {p.trabajo&&<div style={{fontSize:12,color:T.text,lineHeight:1.4,marginBottom:4}}>{p.trabajo}</div>}
+                          {(p.materiales||[]).length>0&&(
+                            <div style={{fontSize:11,color:T.muted,marginBottom:4}}>
                               <span style={{fontWeight:600}}>Materiales: </span>
                               {p.materiales.map(m=>`${m.desc||m.nombre||""} x${m.qty||m.cantidad||1}`).join(" · ")}
                             </div>
                           )}
-                          <div style={{display:"flex", gap:12, fontSize:12, marginTop:4}}>
-                            {p.importe_mo>0 && <span style={{color:T.muted}}>MO: <b style={{color:T.text}}>{p.importe_mo.toFixed(2)}€</b></span>}
-                            {p.importe_materiales>0 && <span style={{color:T.muted}}>Mat: <b style={{color:T.text}}>{p.importe_materiales.toFixed(2)}€</b></span>}
-                            {p.importe_total>0 && <span style={{color:T.accent, fontWeight:700}}>{p.importe_total.toFixed(2)}€</span>}
+                          <div style={{display:"flex",gap:12,fontSize:12,marginTop:4}}>
+                            {p.importe_mo>0&&<span style={{color:T.muted}}>MO: <b style={{color:T.text}}>{p.importe_mo.toFixed(2)}€</b></span>}
+                            {p.importe_materiales>0&&<span style={{color:T.muted}}>Mat: <b style={{color:T.text}}>{p.importe_materiales.toFixed(2)}€</b></span>}
+                            {p.importe_total>0&&<span style={{color:T.accent,fontWeight:700}}>{p.importe_total.toFixed(2)}€</span>}
                           </div>
                         </div>
                       ))}
@@ -7197,8 +7312,8 @@ export default function App() {
   async function loadAll() {
     const fetch=async(t,o)=>{ let q=supabase.from(t).select("*"); if(o)q=q.order(o,{ascending:o==="nombre"||o==="fecha"}); const {data:d}=await q; return d||[]; };
     const hoyISO=new Date().toISOString().slice(0,10);
-    const [cls,avs,pres,evs,ins,revs,eqs,mants,obras,emp,prs,ficHoy]=await Promise.all([fetch("clientes","nombre"),fetch("averias","created_at"),fetch("presupuestos","created_at"),fetch("eventos","fecha"),fetch("instalaciones","nombre"),fetch("revisiones","created_at"),fetch("equipos","nombre"),fetch("mantenimientos","created_at"),fetch("instalaciones_obras","created_at"),supabase.from("empresa").select("*").eq("id",1).single(),supabase.from("profiles").select("*").eq("activo",true),supabase.from("fichajes").select("empleado_id,entrada").eq("fecha",hoyISO)]);
-    setData({clientes:cls,averias:avs,presupuestos:pres,eventos:evs,instalaciones:ins,revisiones:revs,equipos:eqs,mantenimientos:mants,instalaciones_obras:obras,profiles:prs.data||[],fichajesHoy:ficHoy.data||[]});
+    const [cls,avs,pres,evs,ins,revs,eqs,mants,obras,emp,prs,ficHoy,eqEvs,eqArch]=await Promise.all([fetch("clientes","nombre"),fetch("averias","created_at"),fetch("presupuestos","created_at"),fetch("eventos","fecha"),fetch("instalaciones","nombre"),fetch("revisiones","created_at"),fetch("equipos","nombre"),fetch("mantenimientos","created_at"),fetch("instalaciones_obras","created_at"),supabase.from("empresa").select("*").eq("id",1).single(),supabase.from("profiles").select("*").eq("activo",true),supabase.from("fichajes").select("empleado_id,entrada").eq("fecha",hoyISO),fetch("equipo_eventos","fecha"),fetch("equipo_archivos","created_at")]);
+    setData({clientes:cls,averias:avs,presupuestos:pres,eventos:evs,instalaciones:ins,revisiones:revs,equipos:eqs,mantenimientos:mants,instalaciones_obras:obras,profiles:prs.data||[],fichajesHoy:ficHoy.data||[],equipo_eventos:eqEvs,equipo_archivos:eqArch});
     if(emp.data) setEmpresa(emp.data);
     if(prs.data) setTechs(prs.data);
     const {data:mats}=await supabase.from("materiales").select("*").eq("activo",true).order("nombre",{ascending:true});
