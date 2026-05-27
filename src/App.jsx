@@ -70,55 +70,82 @@ const AIBtn = ({ch,onClick,disabled})=>(
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Paleta de estado unificada ─────────────────────────────────────────── */
-const SC = {
-  nueva:               "#7c3aed",
-  nuevo:               "#7c3aed",
-  pendiente:           "#7c3aed",
-  en_reparacion:       "#2563eb",
-  en_proceso:          "#2563eb",
-  en_curso:            "#2563eb",
+const SC_LIGHT = {
+  nueva:               "#dc2626",
+  nuevo:               "#dc2626",
+  pendiente:           "#dc2626",
+  en_reparacion:       "#f97316",
+  en_proceso:          "#f97316",
+  en_curso:            "#f97316",
   pendiente_piezas:    "#f59e0b",
-  presupuesto_enviado: "#0284c7",
-  enviado:             "#0284c7",
-  pendiente_facturar:  "#f97316",
-  facturado:           "#64748b",
-  facturada:           "#64748b",
+  presupuesto_enviado: "#f59e0b",
+  enviado:             "#f59e0b",
+  pendiente_facturar:  "#7c3aed",
   cerrada:             "#16a34a",
   cerrado:             "#16a34a",
   completada:          "#16a34a",
   aceptado:            "#16a34a",
-  rechazado:           "#dc2626",
+  facturado:           "#16a34a",
+  facturada:           "#16a34a",
+  rechazado:           "#64748b",
 };
 
-const BS = {
-  nueva:               { label:"Nueva",            color:SC.nueva },
-  en_reparacion:       { label:"En reparación",    color:SC.en_reparacion },
-  pendiente_piezas:    { label:"Pend. piezas",     color:SC.pendiente_piezas },
-  presupuesto_enviado: { label:"Presup. enviado",  color:SC.presupuesto_enviado },
-  cerrada:             { label:"Cerrada",          color:SC.cerrada },
-  pendiente_facturar:  { label:"Pend. facturar",   color:SC.pendiente_facturar },
-  facturado:           { label:"Facturado",        color:SC.facturado },
+const SC_DARK = {
+  nueva:               "#f87171",
+  nuevo:               "#f87171",
+  pendiente:           "#f87171",
+  en_reparacion:       "#fb923c",
+  en_proceso:          "#fb923c",
+  en_curso:            "#fb923c",
+  pendiente_piezas:    "#fbbf24",
+  presupuesto_enviado: "#fbbf24",
+  enviado:             "#fbbf24",
+  pendiente_facturar:  "#a78bfa",
+  cerrada:             "#4ade80",
+  cerrado:             "#4ade80",
+  completada:          "#4ade80",
+  aceptado:            "#4ade80",
+  facturado:           "#4ade80",
+  facturada:           "#4ade80",
+  rechazado:           "#94a3b8",
 };
+
+const mkBS = SC => ({
+  nueva:               { label:"Nueva",           color:SC.nueva },
+  en_reparacion:       { label:"En reparación",   color:SC.en_reparacion },
+  pendiente_piezas:    { label:"Pend. piezas",    color:SC.pendiente_piezas },
+  presupuesto_enviado: { label:"Presup. enviado", color:SC.presupuesto_enviado },
+  cerrada:             { label:"Cerrada",         color:SC.cerrada },
+  pendiente_facturar:  { label:"Pend. facturar",  color:SC.pendiente_facturar },
+  facturado:           { label:"Facturado",       color:SC.facturado },
+});
+
+const mkMS = SC => ({
+  nuevo:              { label:"Nuevo",          color:SC.nuevo },
+  en_proceso:         { label:"En proceso",     color:SC.en_proceso },
+  cerrado:            { label:"Cerrado",        color:SC.cerrado },
+  pendiente_facturar: { label:"Pend. facturar", color:SC.pendiente_facturar },
+  facturado:          { label:"Facturado",      color:SC.facturado },
+});
+
+const mkPS = SC => ({
+  nuevo:     { label:"Nuevo",     color:SC.nuevo },
+  enviado:   { label:"Enviado",   color:SC.enviado },
+  aceptado:  { label:"Aceptado",  color:SC.aceptado },
+  rechazado: { label:"Rechazado", color:SC.rechazado },
+});
+
+let BS = mkBS(SC_LIGHT);
+let MS = mkMS(SC_LIGHT);
+let PS = mkPS(SC_LIGHT);
+
 const BS_ACTIVOS  = ["nueva","en_reparacion","pendiente_piezas","presupuesto_enviado","cerrada"];
 const BS_ALL      = ["nueva","en_reparacion","pendiente_piezas","presupuesto_enviado","cerrada","pendiente_facturar","facturado"];
 const SO_B = { nueva:0,en_reparacion:1,pendiente_piezas:2,presupuesto_enviado:3,cerrada:4,pendiente_facturar:5,facturado:10 };
 
-const MS = {
-  nuevo:              { label:"Nuevo",           color:SC.nuevo },
-  en_proceso:         { label:"En proceso",      color:SC.en_proceso },
-  cerrado:            { label:"Cerrado",         color:SC.cerrado },
-  pendiente_facturar: { label:"Pend. facturar",  color:SC.pendiente_facturar },
-  facturado:          { label:"Facturado",       color:SC.facturado },
-};
 const MS_ACTIVOS = ["nuevo","en_proceso","cerrado"];
 const SO_M = { nuevo:0,en_proceso:1,cerrado:2,pendiente_facturar:3,facturado:10 };
 
-const PS = {
-  nuevo:    { label:"Nuevo",     color:SC.nuevo },
-  enviado:  { label:"Enviado",   color:SC.enviado },
-  aceptado: { label:"Aceptado",  color:SC.aceptado },
-  rechazado:{ label:"Rechazado", color:SC.rechazado },
-};
 const PS_ORDER = ["nuevo","enviado","aceptado","rechazado"];
 const EQ = ["Caldera","Split A/C","Bomba de calor","Fan-coil","Climatizador","Aerotermia","VRV/VRF","Suelo radiante","Otro"];
 const MT_TIPOS = ["mensual","trimestral","semestral","anual"];
@@ -233,8 +260,8 @@ function Sidebar({ user, view, setView, onLogout, data, open, onToggle, onClose,
   const fichajesHoy=data.fichajesHoy||[];
   const sinFichar=(horaActual>=7&&horaActual<20)?(data.profiles||[]).filter(p=>p.ficha!==false&&!fichajesHoy.find(f=>f.empleado_id===p.id&&f.entrada)).length:0;
   const navBadges={
-    avisos:[[avisosNuevos,SC.nueva],[avisosPendF,SC.pendiente_facturar]],
-    presupuestos:[[presNuevos,SC.nuevo],[presEnviados,SC.enviado],[presAceptados,SC.aceptado]],
+    avisos:[[avisosNuevos,"#dc2626"],[avisosPendF,"#7c3aed"]],
+    presupuestos:[[presNuevos,"#dc2626"],[presEnviados,"#f59e0b"],[presAceptados,"#16a34a"]],
     instalaciones_obras:[[instPendiente,OB_ESTADOS.pendiente.color],[instEnCurso,OB_ESTADOS.en_curso.color],[instPendF,OB_ESTADOS.pendiente_facturar.color]],
     contratos:[[mtUrg,T.red]],
     fichajes:[[sinFichar,T.red]],
@@ -247,7 +274,7 @@ function Sidebar({ user, view, setView, onLogout, data, open, onToggle, onClose,
       <button onClick={onToggle} style={{ width:34,height:34,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>≡</button>
       <div style={{ display:"flex",alignItems:"center",gap:8,flex:1 }}><div style={{ width:26,height:26,borderRadius:7,background:T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,color:"#fff" }}>BL</div><span style={{ fontSize:14,fontWeight:700,color:T.text,fontFamily:"'Sora',sans-serif" }}>BLCH</span></div>
       {avisosNuevos>0&&<span style={{ background:T.red,color:"#fff",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700 }}>{avisosNuevos}</span>}
-      {(avisosPendF+instPendF)>0&&<span style={{ background:SC.pendiente_facturar,color:"#fff",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700 }}>{avisosPendF+instPendF}</span>}
+      {(avisosPendF+instPendF)>0&&<span style={{ background:"#7c3aed",color:"#fff",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700 }}>{avisosPendF+instPendF}</span>}
     </div>
     {open&&<div onClick={onToggle} style={{ position:"fixed",inset:0,zIndex:91,background:"rgba(15,23,42,0.35)",backdropFilter:"blur(3px)" }}/>}
     <div style={{ position:"fixed",top:0,left:0,bottom:64,zIndex:92,width:270,background:T.card,boxShadow:"4px 0 20px rgba(0,0,0,0.12)",transform:open?"translateX(0)":"translateX(-100%)",transition:"transform 0.22s ease",display:"flex",flexDirection:"column" }}>
@@ -1704,7 +1731,7 @@ function MantenimientosView({ data, user, techs, refresh, empresa }) {
       <div style={{ display:"flex", gap:6, marginBottom:14, overflowX:"auto", paddingBottom:4 }}>
         {filtros.map(f=>{
           const isActive = filter===f.key;
-          const colors = {activas:T.accent, pendiente_facturar:SC.pendiente_facturar, facturadas:SC.facturada, todas:T.sub};
+          const colors = {activas:T.accent, pendiente_facturar:"#7c3aed", facturadas:"#16a34a", todas:T.sub};
           const bgs = {activas:T.accentLight, pendiente_facturar:"#fff7ed", facturadas:T.surface, todas:T.bg};
           const c = colors[f.key]||T.sub;
           const bg = bgs[f.key]||T.bg;
@@ -2245,7 +2272,7 @@ function AvisosView({ data, user, techs, refresh, empresa, onSelect, onSelectMan
   const sortedMants = [...applyFilter(allMants, false)].sort((a,b)=>(SO_M[a.status]??5)-(SO_M[b.status]??5));
   const cl = id => (data.clientes||[]).find(c=>c.id===id);
 
-  const fColors = { activos:T.accent, pendiente_facturar:SC.pendiente_facturar, facturado:SC.facturado, todos:T.sub };
+  const fColors = { activos:T.accent, pendiente_facturar:"#7c3aed", facturado:"#16a34a", todos:T.sub };
   const fBgs    = { activos:T.accentLight, pendiente_facturar:"#fff7ed", facturado:T.surface, todos:T.bg };
 
   function countFilter(key) {
@@ -2283,14 +2310,14 @@ function AvisosView({ data, user, techs, refresh, empresa, onSelect, onSelectMan
       <div style={{ display:"flex", gap:8, marginBottom:14 }}>
         {[
           ["averias","Averías",allBds.length,[
-            [allBds.filter(b=>b.status==="nueva").length,SC.nueva],
-            [allBds.filter(b=>b.status==="en_reparacion").length,SC.en_reparacion],
-            [allBds.filter(b=>b.status==="pendiente_facturar").length,SC.pendiente_facturar],
+            [allBds.filter(b=>b.status==="nueva").length,"#dc2626"],
+            [allBds.filter(b=>b.status==="en_reparacion").length,"#f97316"],
+            [allBds.filter(b=>b.status==="pendiente_facturar").length,"#7c3aed"],
           ]],
           ["mantenimientos","Mantenimientos",allMants.length,[
-            [allMants.filter(m=>m.status==="nuevo").length,SC.nuevo],
-            [allMants.filter(m=>m.status==="en_proceso").length,SC.en_proceso],
-            [allMants.filter(m=>m.status==="pendiente_facturar").length,SC.pendiente_facturar],
+            [allMants.filter(m=>m.status==="nuevo").length,"#dc2626"],
+            [allMants.filter(m=>m.status==="en_proceso").length,"#f97316"],
+            [allMants.filter(m=>m.status==="pendiente_facturar").length,"#7c3aed"],
           ]],
         ].map(([k,l,cnt,bdgs])=>(
           <button key={k} onClick={()=>setTab(k)}
@@ -2311,7 +2338,7 @@ function AvisosView({ data, user, techs, refresh, empresa, onSelect, onSelectMan
           const bg = fBgs[k]||T.bg;
           return (
             <button key={k} onClick={()=>setFilter(k)}
-              style={{ display:"inline-flex",alignItems:"center",gap:6,padding:"7px 16px", borderRadius:20, border:`1px solid ${isActive?c:T.border}`, background:isActive?c+"22":T.card, color:isActive?c:T.sub, fontSize:12, fontWeight:isActive?700:400, cursor:"pointer", whiteSpace:"nowrap", fontFamily:"'DM Sans',sans-serif" }}>
+              style={{ display:"inline-flex",alignItems:"center",gap:6,padding:"7px 16px", borderRadius:20, border:isActive?`1px solid ${c}`:`1.5px solid ${fColors[k]+"88"}`, background:isActive?c+"22":T.card, color:isActive?c:T.sub, fontSize:12, fontWeight:isActive?700:400, cursor:"pointer", whiteSpace:"nowrap", fontFamily:"'DM Sans',sans-serif" }}>
               {l}
               <span style={{ minWidth:18,height:18,borderRadius:9,background:fColors[k]||T.sub,color:"#fff",fontSize:10,fontWeight:700,display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 5px",lineHeight:1,flexShrink:0 }}>{countFilter(k)}</span>
             </button>
@@ -2348,6 +2375,7 @@ function AvisosView({ data, user, techs, refresh, empresa, onSelect, onSelectMan
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                     <span style={{ padding:"2px 10px", borderRadius:20, fontSize:11, fontWeight:700, background:(s?.color||T.muted)+"15", color:s?.color||T.muted }}>{s?.label||b.status}</span>
+                    <span style={{ fontSize:11, color:T.muted, marginLeft:6 }}>{new Date(b.created_at).toLocaleDateString("es-ES")}</span>
                     {actionBtns(c)}
                     <button onClick={e=>{ e.stopPropagation(); openMaps(b.direccion); }}
                       style={{ width:30, height:30, borderRadius:7, background:T.accentLight, border:"1.5px solid "+T.accent+"40", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
@@ -2390,6 +2418,7 @@ function AvisosView({ data, user, techs, refresh, empresa, onSelect, onSelectMan
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                     <span style={{ padding:"2px 10px", borderRadius:20, fontSize:11, fontWeight:700, background:(s?.color||T.muted)+"15", color:s?.color||T.muted }}>{s?.label||m.status}</span>
+                    <span style={{ fontSize:11, color:T.muted, marginLeft:6 }}>{new Date(m.created_at).toLocaleDateString("es-ES")}</span>
                     {actionBtns(c)}
                     <button onClick={e=>{ e.stopPropagation(); openMaps(m.direccion); }}
                       style={{ width:30,height:30,borderRadius:7,background:T.accentLight,border:"1.5px solid "+T.accent+"40",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer" }}>
@@ -2444,7 +2473,7 @@ function AveriasList({ data, user, techs, refresh, onSelect }) {
       <div style={{ display:"flex", gap:6, marginBottom:14, overflowX:"auto", paddingBottom:4 }}>
         {filtros.map(f=>{
           const isActive = filter===f.key;
-          const fColors = {activas:T.accent, pendiente_facturar:SC.pendiente_facturar, facturadas:SC.facturada, todas:T.sub};
+          const fColors = {activas:T.accent, pendiente_facturar:"#7c3aed", facturadas:"#16a34a", todas:T.sub};
           const fBgs    = {activas:T.accentLight, pendiente_facturar:"#fff7ed", facturadas:T.surface, todas:T.bg};
           const c  = fColors[f.key]||T.sub;
           const bg = fBgs[f.key]||T.bg;
@@ -2490,6 +2519,7 @@ function AveriasList({ data, user, techs, refresh, onSelect }) {
                   <span style={{ padding:"2px 10px", borderRadius:20, fontSize:11, fontWeight:700, background:(s?.color||T.muted)+"15", color:s?.color||T.muted }}>
                     {s?.label || b.status}
                   </span>
+                  <span style={{ fontSize:11, color:T.muted, marginLeft:6 }}>{new Date(b.created_at).toLocaleDateString("es-ES")}</span>
                   {c?.telefono && (
                     <a href={`https://wa.me/34${c.telefono.replace(/\s/g,'')}`} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
                       style={{ width:30, height:30, borderRadius:7, background:T.greenLight, border:"1.5px solid "+T.border, display:"flex", alignItems:"center", justifyContent:"center", textDecoration:"none" }}>
@@ -3160,17 +3190,18 @@ function PresupuestosList({ data, refresh, user, onSelect, empresa={} }) {
         <Btn ch={isMobile?"+ Nuevo":"+ Nuevo presupuesto"} onClick={()=>setShowNew(true)}/>
       </div>
       <div style={{ display:"flex",gap:6,marginBottom:14,overflowX:"auto",paddingBottom:4 }}>
-        {filtros.map(f=>(<button key={f.key} onClick={()=>setFilter(f.key)} style={{ display:"inline-flex",alignItems:"center",gap:5,padding:"6px 14px",borderRadius:20,border:`1px solid ${filter===f.key?PS[f.key].color:T.border}`,background:filter===f.key?PS[f.key].color+"22":T.card,color:filter===f.key?PS[f.key].color:T.sub,fontSize:12,fontWeight:filter===f.key?700:400,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'DM Sans',sans-serif" }}>{f.label}<span style={{ minWidth:18,height:18,borderRadius:9,background:PS[f.key].color,color:"#fff",fontSize:10,fontWeight:700,display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 5px",lineHeight:1,flexShrink:0 }}>{f.items.length}</span></button>))}
+        {filtros.map(f=>(<button key={f.key} onClick={()=>setFilter(f.key)} style={{ display:"inline-flex",alignItems:"center",gap:5,padding:"6px 14px",borderRadius:20,border:filter===f.key?`1px solid ${PS[f.key].color}`:`1.5px solid ${PS[f.key].color+"88"}`,background:filter===f.key?PS[f.key].color+"22":T.card,color:filter===f.key?PS[f.key].color:T.sub,fontSize:12,fontWeight:filter===f.key?700:400,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'DM Sans',sans-serif" }}>{f.label}<span style={{ minWidth:18,height:18,borderRadius:9,background:PS[f.key].color,color:"#fff",fontSize:10,fontWeight:700,display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 5px",lineHeight:1,flexShrink:0 }}>{f.items.length}</span></button>))}
       </div>
       <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
         {sorted.length===0&&<div style={{ textAlign:"center",color:T.muted,padding:"50px 0",fontSize:13 }}>Sin presupuestos en este estado</div>}
         {sorted.map(bu=>{ const c=cl(bu.cliente_id); const s=PS[bu.status]; const evPr=(data.eventos||[]).find(e=>e.presupuesto_id===bu.id); return <div key={bu.id} onClick={()=>setSelPresu(bu)} style={{ background:T.card,border:`1px solid ${T.border}`,borderLeft:`3px solid ${s?.color||T.muted}`,borderRadius:11,padding:"13px 15px",cursor:"pointer",transition:"all 0.15s" }} onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)";e.currentTarget.style.transform="translateY(-1px)";}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="none";e.currentTarget.style.transform="translateY(0)";}}>
           <div style={{ fontSize:13,fontWeight:600,color:T.text,marginBottom:5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{bu.descripcion}</div>
           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap" }}>
-            <div style={{ display:"flex",alignItems:"center",gap:8 }}><span style={{ fontSize:11,color:T.muted,fontWeight:500 }}>{c?.nombre||"Sin cliente"}</span><span style={{ fontSize:10,color:T.border }}>·</span><span style={{ fontSize:11,color:T.muted }}>{bu.averia_id?`Avería #${bu.averia_id}`:"Directo"}</span><span style={{ fontSize:10,color:T.border }}>·</span><span style={{ fontSize:11,color:T.muted }}>{bu.created_at?.slice(0,10)}</span><BadgeProg fecha={evPr?.fecha}/></div>
+            <div style={{ display:"flex",alignItems:"center",gap:8 }}><span style={{ fontSize:11,color:T.muted,fontWeight:500 }}>{c?.nombre||"Sin cliente"}</span><span style={{ fontSize:10,color:T.border }}>·</span><span style={{ fontSize:11,color:T.muted }}>{bu.averia_id?`Avería #${bu.averia_id}`:"Directo"}</span><BadgeProg fecha={evPr?.fecha}/></div>
             <div style={{ display:"flex",alignItems:"center",gap:6 }}>
               <span style={{ fontSize:18,fontWeight:700,color:T.accent,fontFamily:"'Sora',sans-serif" }}>{bu.importe} €</span>
               <Badge status={bu.status} type="p"/>
+              <span style={{ fontSize:11, color:T.muted, marginLeft:6 }}>{new Date(bu.created_at).toLocaleDateString("es-ES")}</span>
               {c?.telefono&&<a href={`https://wa.me/34${c.telefono.replace(/\s/g,'')}`} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{ width:30,height:30,borderRadius:7,background:T.greenLight,border:"1.5px solid "+T.border,display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none" }}><svg width="15" height="15" viewBox="0 0 24 24" fill={T.green}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>}
               {c?.telefono&&<a href={`tel:${c.telefono}`} onClick={e=>e.stopPropagation()} style={{ width:30,height:30,borderRadius:7,background:T.greenLight,border:"1.5px solid "+T.border,display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.green} strokeWidth="2" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg></a>}
               {(bu.direccion||c?.direccion)&&<button onClick={e=>{ e.stopPropagation(); openMaps(bu.direccion||c.direccion); }} style={{ width:30,height:30,borderRadius:7,background:T.accentLight,border:"1.5px solid "+T.accent+"40",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></button>}
@@ -3681,54 +3712,359 @@ function ClientesList({ data, refresh, user }) {
    EQUIPOS — Historial de máquinas
    ══════════════════════════════════════════════════════════════════════════ */
 
-function NuevoEquipoModal({ clienteId, onSave, onClose }) {
+const RITE_CHECKLIST = {
+  caldera_gas: [
+    "Revisión y limpieza del quemador de gas",
+    "Verificación presión de gas en quemador",
+    "Limpieza del intercambiador de calor",
+    "Verificación presión del circuito hidráulico",
+    "Control temperatura gases de combustión",
+    "Análisis de combustión (CO, CO2, O2)",
+    "Revisión válvula de seguridad",
+    "Comprobación vaso de expansión",
+    "Verificación estanqueidad circuito gas",
+    "Revisión sistema de evacuación de humos",
+    "Verificación funcionamiento termostatos y sondas",
+  ],
+  caldera_gasoil: [
+    "Revisión y limpieza del quemador de gasoil",
+    "Limpieza y sustitución filtro de gasoil",
+    "Purga del circuito de combustible",
+    "Limpieza del intercambiador de calor",
+    "Verificación presión del circuito hidráulico",
+    "Control temperatura gases de combustión",
+    "Análisis de combustión (CO, CO2, O2)",
+    "Revisión válvula de seguridad",
+    "Comprobación vaso de expansión",
+    "Revisión sistema de evacuación de humos",
+    "Verificación funcionamiento termostatos y sondas",
+  ],
+  caldera_biomasa: [
+    "Limpieza del hogar y cenicero",
+    "Revisión sistema de alimentación de combustible",
+    "Limpieza del intercambiador de calor",
+    "Verificación presión del circuito hidráulico",
+    "Control temperatura gases de combustión",
+    "Revisión válvula de seguridad",
+    "Comprobación vaso de expansión",
+    "Revisión sistema de evacuación de humos y extractor",
+    "Verificación silo/depósito de combustible",
+    "Verificación funcionamiento termostatos y sondas",
+  ],
+  split: [
+    "Limpieza de filtros unidad interior",
+    "Limpieza de evaporador",
+    "Limpieza de condensador unidad exterior",
+    "Verificación carga de gas refrigerante",
+    "Comprobación temperaturas entrada/salida",
+    "Revisión y limpieza bandeja de drenaje",
+    "Verificación funcionamiento eléctrico y mandos",
+    "Comprobación presiones de trabajo",
+    "Revisión estado físico unidades interior/exterior",
+  ],
+  bomba_calor: [
+    "Limpieza de filtros",
+    "Verificación carga de gas refrigerante",
+    "Comprobación presiones circuito",
+    "Revisión intercambiador",
+    "Verificación funcionamiento reversible calor/frío",
+    "Control temperaturas entrada/salida",
+    "Revisión elementos eléctricos",
+    "Comprobación resistencia auxiliar",
+  ],
+  fancoil: [
+    "Limpieza de filtros",
+    "Limpieza de batería",
+    "Verificación válvula de control de agua",
+    "Comprobación caudal de agua",
+    "Revisión bandeja de condensados",
+    "Verificación funcionamiento eléctrico y velocidades",
+    "Comprobación termostato ambiente",
+  ],
+  climatizador: [
+    "Limpieza de filtros entrada/salida",
+    "Revisión baterías de frío y calor",
+    "Verificación humectador si existe",
+    "Comprobación caudales de aire",
+    "Revisión correas y rodamientos ventiladores",
+    "Verificación compuertas de mezcla",
+    "Control temperatura y humedad de impulsión",
+    "Revisión bandeja de condensados",
+  ],
+  enfriadora: [
+    "Limpieza condensador",
+    "Verificación presiones de refrigerante",
+    "Comprobación temperaturas entrada/salida agua",
+    "Revisión bomba de circulación",
+    "Verificación torre de refrigeración si existe",
+    "Control nivel de anticongelante",
+    "Revisión elementos de seguridad",
+    "Comprobación aislamiento tuberías",
+  ],
+  vrv_vrf: [
+    "Verificación unidad exterior",
+    "Comprobación presiones circuito refrigerante",
+    "Limpieza filtros unidades interiores",
+    "Verificación control centralizado",
+    "Comprobación temperaturas de trabajo",
+    "Revisión conexiones eléctricas",
+    "Verificación reparto de carga entre unidades",
+  ],
+  recuperador: [
+    "Limpieza filtros entrada y salida",
+    "Verificación bypass y compuertas",
+    "Comprobación rendimiento del recuperador",
+    "Revisión correas si tiene",
+    "Verificación caudales de aire impulsión/retorno",
+    "Limpieza del núcleo recuperador",
+    "Control presostatos diferenciales",
+  ],
+};
+
+const TIPO_EQUIPO_OPTIONS = [
+  { label:"Caldera Gas",     value:"caldera_gas" },
+  { label:"Caldera Gasoil",  value:"caldera_gasoil" },
+  { label:"Caldera Biomasa", value:"caldera_biomasa" },
+  { label:"Split",           value:"split" },
+  { label:"Bomba de calor",  value:"bomba_calor" },
+  { label:"Fan-coil",        value:"fancoil" },
+  { label:"Climatizador",    value:"climatizador" },
+  { label:"Enfriadora",      value:"enfriadora" },
+  { label:"VRV/VRF",         value:"vrv_vrf" },
+  { label:"Recuperador",     value:"recuperador" },
+  { label:"Otro",            value:"otro" },
+];
+
+function NuevoEquipoModal({ clienteId, instalacionId, onSave, onClose }) {
   const isMobile = useIsMobile();
   const [form, setForm] = useState({
-    nombre:"", marca:"", modelo:"", numero_serie:"",
-    año_instalacion:"", direccion:"", ubicacion:"", notas:""
+    nombre: "", tipo: "", marca: "", modelo: "",
+    potencia: "", numero_serie: "", año_fabricacion: "",
+    ubicacion: "", notas: "",
   });
-  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+  const [periodicidad, setPeriodicidad] = useState({
+    mensual: false, trimestral: false, semestral: false, anual: false
+  });
+  const [proximas, setProximas] = useState({
+    mensual: "", trimestral: "", semestral: "", anual: ""
+  });
+  const [checklist, setChecklist] = useState([]);
+  const [nuevoItem, setNuevoItem] = useState("");
   const [saving, setSaving] = useState(false);
 
-  async function save() {
-    if(!form.nombre.trim()) return;
+  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+
+  // Al cambiar tipo de equipo carga checklist RITE automáticamente
+  const onTipoChange = (tipo) => {
+    upd("tipo", tipo);
+    const items = RITE_CHECKLIST[tipo] || [];
+    setChecklist(items.map(item => ({ texto: item, activo: true })));
+  };
+
+  const toggleItem = (i) => {
+    setChecklist(p => p.map((it,idx) => idx===i ? {...it, activo:!it.activo} : it));
+  };
+
+  const addItem = () => {
+    if(!nuevoItem.trim()) return;
+    setChecklist(p => [...p, { texto: nuevoItem.trim(), activo: true }]);
+    setNuevoItem("");
+  };
+
+  const removeItem = (i) => {
+    setChecklist(p => p.filter((_,idx) => idx!==i));
+  };
+
+  const save = async () => {
+    if(!form.nombre.trim()){ alert("El nombre del equipo es obligatorio"); return; }
     setSaving(true);
-    const { error } = await supabase.from("equipos").insert([{
+    const itemsGuardar = checklist.filter(it=>it.activo).map(it=>it.texto);
+    const payload = {
       cliente_id: clienteId,
-      nombre: form.nombre.trim(),
+      instalacion_id: instalacionId||null,
+      nombre: form.nombre,
+      tipo: form.tipo||null,
       marca: form.marca||null,
       modelo: form.modelo||null,
+      potencia: form.potencia||null,
       numero_serie: form.numero_serie||null,
-      año_instalacion: form.año_instalacion ? parseInt(form.año_instalacion) : null,
-      direccion: form.direccion||null,
+      año_instalacion: form.año_fabricacion ? parseInt(form.año_fabricacion) : null,
       ubicacion: form.ubicacion||null,
       notas: form.notas||null,
-    }]);
-    if(!error) { onSave(); onClose(); }
-    else alert("Error: "+error.message);
+      activa_mensual: periodicidad.mensual,
+      activa_trimestral: periodicidad.trimestral,
+      activa_semestral: periodicidad.semestral,
+      activa_anual: periodicidad.anual,
+      proxima_mensual: proximas.mensual||null,
+      proxima_trimestral: proximas.trimestral||null,
+      proxima_semestral: proximas.semestral||null,
+      proxima_anual: proximas.anual||null,
+      items_mensual: periodicidad.mensual ? itemsGuardar : [],
+      items_trimestral: periodicidad.trimestral ? itemsGuardar : [],
+      items_semestral: periodicidad.semestral ? itemsGuardar : [],
+      items_anual: periodicidad.anual ? itemsGuardar : [],
+    };
+    const { error } = await supabase.from("equipos").insert([payload]);
     setSaving(false);
-  }
+    if(error){ alert("Error: "+error.message); return; }
+    onSave?.(); onClose();
+  };
 
   return (
-    <Modal onClose={onClose} w={560}>
+    <Modal onClose={onClose} w={600}>
       <MHead title="Nuevo equipo" onClose={onClose}/>
-      <div style={{ padding:"18px 22px 22px", display:"flex", flexDirection:"column", gap:14 }}>
-        <Field label="Nombre del equipo *">
-          <input value={form.nombre} onChange={e=>upd("nombre",e.target.value)} style={inp()} placeholder="Ej: Caldera principal, Split salón..."/>
-        </Field>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-          <Field label="Marca"><input value={form.marca} onChange={e=>upd("marca",e.target.value)} style={inp()} placeholder="Baxi, Daikin, Samsung..."/></Field>
-          <Field label="Modelo"><input value={form.modelo} onChange={e=>upd("modelo",e.target.value)} style={inp()} placeholder="Duo-tec 24, Wind-Free..."/></Field>
-          <Field label="Nº de serie"><input value={form.numero_serie} onChange={e=>upd("numero_serie",e.target.value)} style={inp()} placeholder="Opcional"/></Field>
-          <Field label="Año instalación"><input type="number" value={form.año_instalacion} onChange={e=>upd("año_instalacion",e.target.value)} style={inp()} placeholder="2020"/></Field>
+      <div style={{padding: isMobile?"14px":"20px 24px", display:"flex",
+        flexDirection:"column", gap:14, maxHeight:"80vh", overflowY:"auto"}}>
+
+        {/* Tipo de equipo */}
+        <div>
+          <div style={{fontSize:11,color:T.muted,marginBottom:6,fontWeight:600}}>TIPO DE EQUIPO</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+            {TIPO_EQUIPO_OPTIONS.map(opt=>(
+              <button key={opt.value} onClick={()=>onTipoChange(opt.value)}
+                style={{padding:"7px 14px",borderRadius:20,fontSize:12,fontWeight:600,
+                  cursor:"pointer",border:`1.5px solid ${form.tipo===opt.value ? T.accent : T.border}`,
+                  background: form.tipo===opt.value ? T.accentLight : T.surface,
+                  color: form.tipo===opt.value ? T.accent : T.text}}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
-        <Field label="Dirección"><input value={form.direccion} onChange={e=>upd("direccion",e.target.value)} style={inp()} placeholder="Dónde está instalado"/></Field>
-        <Field label="Ubicación exacta"><input value={form.ubicacion} onChange={e=>upd("ubicacion",e.target.value)} style={inp()} placeholder="Ej: Cuarto de calderas, Terraza..."/></Field>
-        <Field label="Notas"><textarea value={form.notas} onChange={e=>upd("notas",e.target.value)} style={{...inp(),minHeight:60,resize:"vertical"}} placeholder="Observaciones adicionales..."/></Field>
-        <div style={{ display:"flex", justifyContent:"flex-end", gap:8 }}>
-          <Btn ch="Cancelar" onClick={onClose} v="g"/>
-          <Btn ch={saving?"Guardando...":"Añadir equipo"} onClick={save} disabled={saving||!form.nombre.trim()}/>
+
+        {/* Datos del equipo */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div style={{gridColumn:"1/-1"}}>
+            <div style={{fontSize:11,color:T.muted,marginBottom:4,fontWeight:600}}>NOMBRE *</div>
+            <input value={form.nombre} onChange={e=>upd("nombre",e.target.value)}
+              placeholder="Ej: Caldera sala principal" style={inp()}/>
+          </div>
+          {[
+            {k:"marca",l:"MARCA",pl:"Ej: Roca"},
+            {k:"modelo",l:"MODELO",pl:"Ej: Condens Gold"},
+            {k:"potencia",l:"POTENCIA (kW)",pl:"Ej: 24"},
+            {k:"numero_serie",l:"Nº SERIE",pl:"Ej: ABC123456"},
+            {k:"año_fabricacion",l:"AÑO FABRICACIÓN",pl:"Ej: 2018"},
+            {k:"ubicacion",l:"UBICACIÓN",pl:"Ej: Sala de calderas"},
+          ].map(f=>(
+            <div key={f.k}>
+              <div style={{fontSize:11,color:T.muted,marginBottom:4,fontWeight:600}}>{f.l}</div>
+              <input value={form[f.k]} onChange={e=>upd(f.k,e.target.value)}
+                placeholder={f.pl} style={inp()}/>
+            </div>
+          ))}
+          <div style={{gridColumn:"1/-1"}}>
+            <div style={{fontSize:11,color:T.muted,marginBottom:4,fontWeight:600}}>NOTAS TÉCNICAS</div>
+            <textarea value={form.notas} onChange={e=>upd("notas",e.target.value)}
+              placeholder="Observaciones técnicas..." style={{...inp(),minHeight:60}}/>
+          </div>
         </div>
+
+        {/* Periodicidad */}
+        <div>
+          <div style={{fontSize:11,color:T.muted,marginBottom:8,fontWeight:600}}>PERIODICIDAD DE REVISIÓN</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {["mensual","trimestral","semestral","anual"].map(tipo=>{
+              const mt = MT[tipo];
+              const activa = periodicidad[tipo];
+              return (
+                <div key={tipo} style={{borderRadius:10,overflow:"hidden",
+                  border:`1.5px solid ${activa ? mt.color+"60" : T.border}`}}>
+                  <div onClick={()=>setPeriodicidad(p=>({...p,[tipo]:!p[tipo]}))}
+                    style={{padding:"10px 14px",cursor:"pointer",
+                      display:"flex",justifyContent:"space-between",alignItems:"center",
+                      background: activa ? mt.color+"15" : T.surface}}>
+                    <span style={{fontSize:13,fontWeight:600,
+                      color: activa ? mt.color : T.text,textTransform:"capitalize"}}>{tipo}</span>
+                    <div style={{width:36,height:20,borderRadius:10,position:"relative",
+                      background: activa ? mt.color : T.border,transition:"all 0.2s"}}>
+                      <div style={{position:"absolute",top:2,
+                        left: activa ? 18 : 2,width:16,height:16,
+                        borderRadius:"50%",background:"#fff",transition:"all 0.2s"}}/>
+                    </div>
+                  </div>
+                  {activa && (
+                    <div style={{padding:"10px 14px",background:T.card,
+                      borderTop:`1px solid ${T.border}`}}>
+                      <div style={{fontSize:11,color:T.muted,marginBottom:4}}>Primera revisión</div>
+                      <input type="date" value={proximas[tipo]}
+                        onChange={e=>setProximas(p=>({...p,[tipo]:e.target.value}))}
+                        style={inp()}/>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Checklist */}
+        {checklist.length>0 && (
+          <div>
+            <div style={{fontSize:11,color:T.muted,marginBottom:8,fontWeight:600}}>
+              CHECKLIST DE REVISIÓN — marca los que aplican
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {checklist.map((item,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:8,
+                  padding:"8px 12px",borderRadius:8,
+                  background: item.activo ? T.accentLight : T.surface,
+                  border:`1px solid ${item.activo ? T.accent+"40" : T.border}`}}>
+                  <div onClick={()=>toggleItem(i)}
+                    style={{width:18,height:18,borderRadius:4,flexShrink:0,cursor:"pointer",
+                      border:`2px solid ${item.activo ? T.accent : T.border}`,
+                      background: item.activo ? T.accent : "none",
+                      display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    {item.activo && <svg width="10" height="10" viewBox="0 0 10 10">
+                      <polyline points="1,5 4,8 9,2" stroke="#fff" strokeWidth="2" fill="none"/>
+                    </svg>}
+                  </div>
+                  <span style={{flex:1,fontSize:12,color: item.activo ? T.text : T.muted}}>
+                    {item.texto}
+                  </span>
+                  <button onClick={()=>removeItem(i)}
+                    style={{background:"none",border:"none",color:T.muted,
+                      cursor:"pointer",fontSize:16,padding:"0 4px"}}>×</button>
+                </div>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:10}}>
+              <input value={nuevoItem} onChange={e=>setNuevoItem(e.target.value)}
+                onKeyDown={e=>e.key==="Enter"&&addItem()}
+                placeholder="Añadir ítem al checklist..."
+                style={{...inp(),flex:1,fontSize:12}}/>
+              <button onClick={addItem}
+                style={{padding:"0 14px",borderRadius:8,border:"none",
+                  background:T.accent,color:"#fff",cursor:"pointer",fontWeight:600}}>+</button>
+            </div>
+          </div>
+        )}
+
+        {form.tipo==="otro" && checklist.length===0 && (
+          <div>
+            <div style={{fontSize:11,color:T.muted,marginBottom:8,fontWeight:600}}>
+              CHECKLIST DE REVISIÓN
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <input value={nuevoItem} onChange={e=>setNuevoItem(e.target.value)}
+                onKeyDown={e=>e.key==="Enter"&&addItem()}
+                placeholder="Añadir ítem al checklist..."
+                style={{...inp(),flex:1,fontSize:12}}/>
+              <button onClick={addItem}
+                style={{padding:"0 14px",borderRadius:8,border:"none",
+                  background:T.accent,color:"#fff",cursor:"pointer",fontWeight:600}}>+</button>
+            </div>
+          </div>
+        )}
+
+        {/* Botón guardar */}
+        <button onClick={save} disabled={saving}
+          style={{padding:"12px",borderRadius:10,border:"none",
+            background: saving ? T.border : T.accent,
+            color:"#fff",cursor: saving?"not-allowed":"pointer",
+            fontSize:14,fontWeight:700,marginTop:4}}>
+          {saving ? "Guardando..." : "Guardar equipo"}
+        </button>
       </div>
     </Modal>
   );
@@ -4908,33 +5244,215 @@ function CalendarView({ data, user, refresh }) {
   );
 }
 
+/* ─── INST DETALLE ───────────────────────────────────────────────────────── */
+function InstDetalle({ inst, data, refresh, onClose }) {
+  const isMobile = useIsMobile();
+  const equipos = (data.equipos||[]).filter(eq => eq.instalacion_id === inst.id);
+  const cliente = (data.clientes||[]).find(c => c.id === inst.cliente_id);
+  const [showNuevoEquipo, setShowNuevoEquipo] = useState(false);
+  const [selEquipo, setSelEquipo] = useState(null);
+  const [showVincular, setShowVincular] = useState(false);
+
+  // Equipos del cliente sin contrato asignado (para vincular)
+  const equiposSinContrato = (data.equipos||[]).filter(eq =>
+    eq.cliente_id === inst.cliente_id && !eq.instalacion_id
+  );
+
+  const vincularEquipo = async (eq) => {
+    await supabase.from("equipos").update({ instalacion_id: inst.id }).eq("id", eq.id);
+    refresh?.();
+    setShowVincular(false);
+  };
+
+  const desvincularEquipo = async (eq) => {
+    if(!window.confirm("¿Quitar este equipo del contrato? El equipo y su historial se conservan.")) return;
+    await supabase.from("equipos").update({ instalacion_id: null }).eq("id", eq.id);
+    refresh?.();
+  };
+
+  return (
+    <Modal onClose={onClose} w={640}>
+      <MHead title={inst.nombre} sub={cliente?.nombre||""} onClose={onClose}/>
+      <div style={{padding: isMobile?"14px":"20px 24px", display:"flex", flexDirection:"column", gap:16}}>
+
+        {/* Estado del contrato */}
+        <div style={{display:"flex", gap:8, alignItems:"center"}}>
+          <div style={{width:8,height:8,borderRadius:"50%",
+            background: inst.activo!==false ? T.green : T.muted}}/>
+          <span style={{fontSize:12,color: inst.activo!==false ? T.green : T.muted, fontWeight:600}}>
+            {inst.activo!==false ? "Contrato activo" : "Contrato inactivo"}
+          </span>
+          {inst.notas && <span style={{fontSize:12,color:T.muted,marginLeft:8}}>{inst.notas}</span>}
+        </div>
+
+        {/* Cabecera equipos */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontSize:11,fontWeight:700,color:T.muted,letterSpacing:1}}>
+            EQUIPOS DEL CONTRATO ({equipos.length})
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            {equiposSinContrato.length>0 && (
+              <button onClick={()=>setShowVincular(true)}
+                style={{fontSize:12,padding:"6px 12px",borderRadius:8,
+                  border:`1px solid ${T.accent}40`,background:T.accentLight,
+                  color:T.accent,cursor:"pointer",fontWeight:600}}>
+                Añadir existente
+              </button>
+            )}
+            <button onClick={()=>setShowNuevoEquipo(true)}
+              style={{fontSize:12,padding:"6px 12px",borderRadius:8,
+                border:"none",background:T.accent,
+                color:"#fff",cursor:"pointer",fontWeight:600}}>
+              + Nuevo equipo
+            </button>
+          </div>
+        </div>
+
+        {/* Lista de equipos */}
+        {equipos.length===0 ? (
+          <div style={{textAlign:"center",padding:"30px 20px",color:T.muted,fontSize:13,
+            background:T.surface,borderRadius:10,border:`2px dashed ${T.border}`}}>
+            Sin equipos en este contrato. Añade uno para empezar.
+          </div>
+        ) : (
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {equipos.map(eq => {
+              const frecuencias = ["mensual","trimestral","semestral","anual"]
+                .filter(t => eq["activa_"+t]);
+              return (
+                <div key={eq.id} style={{background:T.surface,borderRadius:10,
+                  padding:"12px 14px",border:`1px solid ${T.border}`}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:600,fontSize:14,color:T.text}}>{eq.nombre}</div>
+                      <div style={{fontSize:12,color:T.muted,marginTop:2}}>
+                        {[eq.marca,eq.modelo,eq.ubicacion].filter(Boolean).join(" · ")}
+                      </div>
+                      {frecuencias.length>0 ? (
+                        <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
+                          {frecuencias.map(t => {
+                            const mt = MT[t];
+                            const info = urgInfo(eq["proxima_"+t]||null);
+                            const uc = UCOL[info.level]||T.muted;
+                            return (
+                              <span key={t} style={{fontSize:11,padding:"2px 8px",borderRadius:20,
+                                background:mt.color+"15",border:`1px solid ${mt.color}40`,
+                                color:mt.color,fontWeight:600}}>
+                                {mt.label}
+                                {eq["proxima_"+t] && (
+                                  <span style={{color:uc,marginLeft:4}}>· {info.label}</span>
+                                )}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div style={{fontSize:11,color:T.muted,marginTop:6}}>
+                          Sin frecuencia de revisión asignada
+                        </div>
+                      )}
+                    </div>
+                    <div style={{display:"flex",gap:6,marginLeft:8}}>
+                      <button onClick={()=>setSelEquipo(eq)}
+                        style={{fontSize:11,padding:"4px 10px",borderRadius:6,
+                          border:`1px solid ${T.border}`,background:T.card,
+                          color:T.text,cursor:"pointer"}}>
+                        Editar
+                      </button>
+                      <button onClick={()=>desvincularEquipo(eq)}
+                        style={{fontSize:11,padding:"4px 10px",borderRadius:6,
+                          border:`1px solid ${T.red}40`,background:T.redLight,
+                          color:T.red,cursor:"pointer"}}>
+                        Quitar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Panel vincular equipo existente */}
+        {showVincular && (
+          <div style={{background:T.surface,borderRadius:10,padding:"14px",
+            border:`1px solid ${T.border}`}}>
+            <div style={{fontSize:12,fontWeight:700,color:T.muted,marginBottom:10}}>
+              EQUIPOS DISPONIBLES DEL CLIENTE
+            </div>
+            {equiposSinContrato.map(eq=>(
+              <div key={eq.id} onClick={()=>vincularEquipo(eq)}
+                style={{padding:"10px 12px",borderRadius:8,cursor:"pointer",
+                  display:"flex",justifyContent:"space-between",alignItems:"center",
+                  border:`1px solid ${T.border}`,marginBottom:6,background:T.card}}
+                onMouseEnter={e=>e.currentTarget.style.background=T.accentLight}
+                onMouseLeave={e=>e.currentTarget.style.background=T.card}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:600,color:T.text}}>{eq.nombre}</div>
+                  <div style={{fontSize:11,color:T.muted}}>
+                    {[eq.marca,eq.modelo,eq.ubicacion].filter(Boolean).join(" · ")}
+                  </div>
+                </div>
+                <span style={{fontSize:12,color:T.accent,fontWeight:600}}>Añadir →</span>
+              </div>
+            ))}
+            <button onClick={()=>setShowVincular(false)}
+              style={{marginTop:6,fontSize:12,color:T.muted,background:"none",
+                border:"none",cursor:"pointer"}}>Cancelar</button>
+          </div>
+        )}
+      </div>
+
+      {showNuevoEquipo && (
+        <NuevoEquipoModal
+          clienteId={inst.cliente_id}
+          instalacionId={inst.id}
+          onSave={()=>refresh?.()}
+          onClose={()=>setShowNuevoEquipo(false)}
+        />
+      )}
+      {selEquipo && (
+        <EquipoDetalle
+          equipo={selEquipo}
+          data={data}
+          refresh={()=>{refresh?.();setSelEquipo(null);}}
+          onClose={()=>setSelEquipo(null)}
+        />
+      )}
+    </Modal>
+  );
+}
+
 /* ─── MANTENIMIENTO ──────────────────────────────────────────────────────── */
 function MantenimientoView({ data, user, refresh, empresa={} }) {
-  const isMobile=useIsMobile(); const [tab,setTab]=useState("pendientes"); const [showInst,setShowInst]=useState(null); const [showRev,setShowRev]=useState(null); const [expanded,setExpanded]=useState(null);
+  const isMobile=useIsMobile(); const [tab,setTab]=useState("pendientes"); const [showInst,setShowInst]=useState(null); const [showRev,setShowRev]=useState(null); const [expanded,setExpanded]=useState(null); const [selInst,setSelInst]=useState(null);
+  const [showNuevoEq, setShowNuevoEq] = useState(null);
   const isAdmin=user.role==="admin"; const insts=data.instalaciones||[]; const revs=data.revisiones||[]; const cls=data.clientes||[]; const [revSel,setRevSel]=useState(null);
   const cl=id=>cls.find(c=>c.id===id);
-  const pendientes=[]; insts.forEach(inst=>{ const c=cl(inst.cliente_id); MT_TIPOS.forEach(tipo=>{ if(!inst["activa_"+tipo])return; const info=urgInfo(inst["proxima_"+tipo]||null); if(info.level!=="ok"&&info.level!=="none") pendientes.push({inst,cl:c,tipo,info}); }); });
-  pendientes.sort((a,b)=>{ const o={urgente:0,hoy:1,semana:2,prox:3,ok:4,none:5}; return (o[a.info.level]??5)-(o[b.info.level]??5); });
-  const urg={urgente:0,hoy:0,semana:0,prox:0}; pendientes.forEach(p=>{ if(urg[p.info.level]!==undefined) urg[p.info.level]++; });
+  const eqs = (data.equipos||[]).filter(eq => eq.instalacion_id);
+  const pendientes = [];
+  eqs.forEach(eq => {
+    const inst = insts.find(i => i.id === eq.instalacion_id);
+    if(!inst) return;
+    const c = cls.find(cl => cl.id === eq.cliente_id);
+    MT_TIPOS.forEach(tipo => {
+      if(!eq["activa_"+tipo]) return;
+      const info = urgInfo(eq["proxima_"+tipo]||null);
+      if(info.level !== "ok" && info.level !== "none")
+        pendientes.push({ eq, inst, cl: c, tipo, info });
+    });
+  });
+  pendientes.sort((a,b) => {
+    const o = { urgente:0, hoy:1, semana:2, prox:3, ok:4, none:5 };
+    return (o[a.info.level]??5) - (o[b.info.level]??5);
+  });
+  const urg = { urgente:0, hoy:0, semana:0, prox:0 };
+  pendientes.forEach(p => {
+    if(urg[p.info.level]!==undefined) urg[p.info.level]++;
+  });
 
-  async function saveInst(form){
-    // Convert empty date strings to null
-    const clean = {...form};
-    ["proxima_mensual","proxima_trimestral","proxima_semestral","proxima_anual"].forEach(k=>{ if(clean[k]==="") clean[k]=null; });
-    // Remove internal keys
-    delete clean._isEdit; delete clean._new_mensual; delete clean._new_trimestral; delete clean._new_semestral; delete clean._new_anual;
-    clean.cliente_id = clean.cliente_id || showInst?.clienteId;
-    if(form._isEdit){
-      const { error }=await supabase.from("instalaciones").update(clean).eq("id",form.id);
-      if(error){ alert("Error: "+error.message); return; }
-    } else {
-      const { error }=await supabase.from("instalaciones").insert([{ ...clean, cliente_id:clean.cliente_id||showInst.clienteId }]);
-      if(error){ alert("Error: "+error.message); return; }
-    }
-    refresh?.(); setShowInst(null);
-  }
   async function delInst(id){ await supabase.from("instalaciones").delete().eq("id",id); refresh?.(); setShowInst(null); }
-  async function saveRev(rev){ const { error }=await supabase.from("revisiones").insert([rev]); if(!error){ await supabase.from("instalaciones").update({ ["proxima_"+rev.tipo]:addDays(todayStr(),MT[rev.tipo].freq) }).eq("id",rev.instalacion_id); refresh?.(); } setShowRev(null); }
+  async function saveRev(rev){ const { error }=await supabase.from("revisiones").insert([rev]); if(!error){ const dias=MT[rev.tipo]?.freq||90; const proxima=addDays(todayStr(),dias); if(rev.equipo_id){ await supabase.from("equipos").update({ ["proxima_"+rev.tipo]:proxima }).eq("id",rev.equipo_id); } else { await supabase.from("instalaciones").update({ ["proxima_"+rev.tipo]:proxima }).eq("id",rev.instalacion_id); } refresh?.(); } setShowRev(null); }
 
   const TabBtn=({id,label,n})=><button onClick={()=>setTab(id)} style={{ padding:"9px 16px",border:"none",background:"none",color:tab===id?T.accent:T.sub,fontSize:12,fontWeight:tab===id?600:400,cursor:"pointer",borderBottom:tab===id?`2px solid ${T.accent}`:"2px solid transparent",display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap" }}>{label}{n>0&&<span style={{ background:tab===id?T.accent:T.border,color:tab===id?"#fff":T.muted,borderRadius:20,padding:"1px 7px",fontSize:10,fontWeight:700 }}>{n}</span>}</button>;
 
@@ -4963,7 +5481,7 @@ function MantenimientoView({ data, user, refresh, empresa={} }) {
               {clienteNombre}
             </div>
             <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
-              {clientePends.map((p,i)=>{ const mt=MT[p.tipo]; const uc=UCOL[p.info.level]; return <div key={i} style={{ background:T.card,border:`1px solid ${T.border}`,borderLeft:`4px solid ${uc}`,borderRadius:11,padding:"13px 15px",display:"flex",alignItems:"center",gap:14 }}><div style={{ flex:1,minWidth:0 }}><div style={{ fontSize:14,fontWeight:600,color:T.text,marginBottom:4 }}>{p.inst.nombre}</div><div style={{ display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}><span style={{ fontSize:11,padding:"1px 8px",borderRadius:20,background:mt.color+"12",border:`1px solid ${mt.color}25`,color:mt.color,fontWeight:600 }}>{mt.label}</span><span style={{ fontSize:10,color:T.border }}>·</span><span style={{ fontSize:11,fontWeight:600,color:uc }}>{p.info.label}</span></div></div><Btn ch="Iniciar" onClick={()=>setShowRev({inst:p.inst,cliente:p.cl,tipo:p.tipo})} v="p" sm/></div>; })}
+              {clientePends.map((p,i)=>{ const mt=MT[p.tipo]; const uc=UCOL[p.info.level]; return <div key={i} style={{ background:T.card,border:`1px solid ${T.border}`,borderLeft:`4px solid ${uc}`,borderRadius:11,padding:"13px 15px",display:"flex",alignItems:"center",gap:14 }}><div style={{ flex:1,minWidth:0 }}><div style={{ fontSize:14,fontWeight:600,color:T.text,marginBottom:4 }}>{p.eq.nombre}</div><div style={{ fontSize:11,color:T.muted }}>{p.inst.nombre}</div><div style={{ display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}><span style={{ fontSize:11,padding:"1px 8px",borderRadius:20,background:mt.color+"12",border:`1px solid ${mt.color}25`,color:mt.color,fontWeight:600 }}>{mt.label}</span><span style={{ fontSize:10,color:T.border }}>·</span><span style={{ fontSize:11,fontWeight:600,color:uc }}>{p.info.label}</span></div></div><Btn ch="Iniciar" onClick={()=>setShowRev({inst:p.inst,eq:p.eq,cliente:p.cl,tipo:p.tipo})} v="p" sm/></div>; })}
             </div>
           </div>
         );})}
@@ -4981,12 +5499,94 @@ function MantenimientoView({ data, user, refresh, empresa={} }) {
             </div>
           </div>
           {exp&&<div style={{ borderTop:`1px solid ${T.border}` }}>
-            {cInsts.length===0?<div style={{ padding:"12px 16px",color:T.muted,fontSize:12 }}>Sin instalaciones.</div>:cInsts.map(inst=><div key={inst.id} style={{ padding:"12px 16px 12px 28px",borderBottom:`1px solid ${T.surface}`,display:"flex",alignItems:"flex-start",gap:12 }}>
-              <div style={{ flex:1 }}><div style={{ fontSize:13,fontWeight:600,color:T.text,marginBottom:6 }}>{inst.nombre}<span style={{ fontSize:11,color:T.muted,fontWeight:400,marginLeft:8 }}>{inst.tipo} · {inst.ubicacion}</span></div>
-                <div style={{ display:"flex",gap:7,flexWrap:"wrap" }}>{MT_TIPOS.map(tipo=>{ if(!inst["activa_"+tipo]) return null; const mt=MT[tipo]; const info=urgInfo(inst["proxima_"+tipo]||null); return <div key={tipo} style={{ display:"flex",alignItems:"center",gap:5,padding:"3px 10px",borderRadius:20,background:mt.color+"10",border:`1px solid ${mt.color}25` }}><span style={{ fontSize:11,fontWeight:600,color:mt.color }}>{mt.label}</span><span style={{ fontSize:10,color:UCOL[info.level] }}>{info.label}</span><button onClick={()=>setShowRev({inst,cliente:c,tipo})} style={{ background:mt.color,border:"none",borderRadius:4,color:"#fff",fontSize:9,padding:"1px 7px",cursor:"pointer",fontWeight:600 }}>Iniciar</button></div>; })}</div>
-              </div>
-              {isAdmin&&<Btn ch="Editar" onClick={()=>setShowInst({clienteId:c.id,inst})} v="g" sm/>}
-            </div>)}
+            {cInsts.map(inst => {
+              const eqsInst = (data.equipos||[]).filter(eq => eq.instalacion_id === inst.id);
+              return (
+                <div key={inst.id} style={{borderBottom:`1px solid ${T.border}`}}>
+                  {/* Cabecera del contrato */}
+                  <div style={{padding:"10px 16px 10px 28px",display:"flex",
+                    justifyContent:"space-between",alignItems:"center"}}>
+                    <div>
+                      <span style={{fontSize:13,fontWeight:700,color:T.text}}>{inst.nombre}</span>
+                      {inst.activo===false && (
+                        <span style={{fontSize:11,color:T.muted,marginLeft:8,
+                          padding:"1px 8px",borderRadius:20,background:T.surface,
+                          border:`1px solid ${T.border}`}}>Inactivo</span>
+                      )}
+                      <span style={{fontSize:11,color:T.muted,marginLeft:8}}>
+                        {eqsInst.length} equipo{eqsInst.length!==1?"s":""}
+                      </span>
+                    </div>
+                    <div style={{display:"flex",gap:6}}>
+                      <button onClick={()=>setShowInst({clienteId:c.id, inst})}
+                        style={{fontSize:11,padding:"4px 10px",borderRadius:6,
+                          border:`1px solid ${T.border}`,background:T.card,
+                          color:T.text,cursor:"pointer"}}>
+                        Editar
+                      </button>
+                      <button onClick={()=>setShowNuevoEq({ clienteId: c.id, instalacionId: inst.id })}
+                        style={{fontSize:11,padding:"4px 10px",borderRadius:6,
+                          border:"none",background:T.accent,
+                          color:"#fff",cursor:"pointer",fontWeight:600}}>
+                        + Equipo
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Lista de equipos */}
+                  {eqsInst.length===0 ? (
+                    <div style={{padding:"10px 28px 14px",fontSize:12,color:T.muted}}>
+                      Sin equipos registrados
+                    </div>
+                  ) : (
+                    <div style={{padding:"0 16px 12px 28px",display:"flex",flexDirection:"column",gap:6}}>
+                      {eqsInst.map(eq=>{
+                        const frecuencias = ["mensual","trimestral","semestral","anual"]
+                          .filter(t=>eq["activa_"+t]);
+                        const tipoLabel = TIPO_EQUIPO_OPTIONS.find(t=>t.value===eq.tipo)?.label||eq.tipo||"";
+                        return (
+                          <div key={eq.id} style={{background:T.surface,borderRadius:8,
+                            padding:"8px 12px",border:`1px solid ${T.border}`,
+                            display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontSize:13,fontWeight:600,color:T.text}}>{eq.nombre}</div>
+                              <div style={{fontSize:11,color:T.muted,marginTop:1}}>
+                                {[tipoLabel,eq.marca,eq.modelo].filter(Boolean).join(" · ")}
+                              </div>
+                              {frecuencias.length>0 && (
+                                <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
+                                  {frecuencias.map(t=>{
+                                    const mt = MT[t];
+                                    const info = urgInfo(eq["proxima_"+t]||null);
+                                    const uc = UCOL[info.level]||T.muted;
+                                    return (
+                                      <span key={t} style={{fontSize:10,padding:"2px 8px",borderRadius:20,
+                                        background:mt.color+"15",border:`1px solid ${mt.color}40`,
+                                        color:mt.color,fontWeight:600}}>
+                                        {mt.label}
+                                        {eq["proxima_"+t] && (
+                                          <span style={{color:uc,marginLeft:4}}>· {info.label}</span>
+                                        )}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                            <button onClick={()=>setShowRev({inst, eq, cliente:c, tipo: frecuencias[0]||"anual"})}
+                              style={{fontSize:11,padding:"4px 10px",borderRadius:6,
+                                border:`1px solid ${T.accent}40`,background:T.accentLight,
+                                color:T.accent,cursor:"pointer",fontWeight:600,marginLeft:8,flexShrink:0}}>
+                              Iniciar revisión
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>}
         </div>; })}
       </div>}
@@ -4994,9 +5594,18 @@ function MantenimientoView({ data, user, refresh, empresa={} }) {
         {revs.length===0&&<div style={{ textAlign:"center",padding:"60px",color:T.muted,fontSize:13 }}>Sin revisiones completadas.</div>}
         {[...revs].sort((a,b)=>(b.created_at||"").localeCompare(a.created_at||"")).map(rev=>{ const mt=MT[rev.tipo]||{label:rev.tipo,color:T.muted}; const total=Object.keys(rev.checks||{}).length; const done=Object.values(rev.checks||{}).filter(Boolean).length; return <div key={rev.id} style={{ background:T.card,border:`1px solid ${T.border}`,borderRadius:11,padding:"13px 15px",display:"flex",alignItems:"center",gap:14 }}><div style={{ flex:1,minWidth:0 }}><div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:4 }}><span style={{ fontSize:13,fontWeight:600,color:T.text }}>{rev.instalacion_nombre}</span><span style={{ fontSize:9,padding:"1px 8px",borderRadius:20,background:mt.color+"12",border:`1px solid ${mt.color}25`,color:mt.color,fontWeight:700 }}>{mt.label}</span><span style={{ fontSize:10,color:T.muted }}>Parte #{rev.num_parte}</span></div><div style={{ fontSize:12,color:T.muted }}>{rev.cliente_nombre} · {rev.fecha} · {rev.tecnico_nombre} · {done}/{total} ítems</div></div>{rev.firma_url&&<span style={{ fontSize:11,color:T.green,fontWeight:600 }}>Firmado</span>}<Btn ch="Ver detalle" onClick={()=>setRevSel(rev)} v="g" sm/></div>; })}
       </div>}
-      {showInst&&<InstModal clienteId={showInst.clienteId} inst={showInst.inst} onSave={saveInst} onDel={delInst} onClose={()=>setShowInst(null)} clientes={cls}/>}
-      {showRev&&<RevisionModal inst={showRev.inst} cliente={showRev.cliente} tipo={showRev.tipo} user={user} onSave={saveRev} onClose={()=>setShowRev(null)}/>}
+      {showInst&&<InstModal initClienteId={showInst.clienteId} inst={showInst.inst} data={data} refresh={refresh} clientes={cls} onClose={()=>setShowInst(null)}/>}
+      {showRev&&<RevisionModal inst={showRev.inst} eq={showRev.eq} cliente={showRev.cliente} tipo={showRev.tipo} user={user} onSave={saveRev} onClose={()=>setShowRev(null)}/>}
       {revSel&&<RevisionDetalle rev={revSel} insts={insts} cls={cls} empresa={empresa} onClose={()=>setRevSel(null)}/>}
+      {selInst&&<InstDetalle inst={selInst} data={data} refresh={()=>{ refresh?.(); setSelInst(null); }} onClose={()=>setSelInst(null)}/>}
+      {showNuevoEq && (
+        <NuevoEquipoModal
+          clienteId={showNuevoEq.clienteId}
+          instalacionId={showNuevoEq.instalacionId}
+          onSave={()=>{ refresh?.(); setShowNuevoEq(null); }}
+          onClose={()=>setShowNuevoEq(null)}
+        />
+      )}
     </div>
   );
 }
@@ -5117,54 +5726,194 @@ function RevisionDetalle({ rev, insts, cls, empresa={}, onClose }) {
   </Modal>);
 }
 
-function InstModal({ clienteId:initClienteId, inst, onSave, onDel, onClose, clientes=[] }) {
-  const isMobile=useIsMobile(); const isEdit=!!inst;
-  const [clienteId,setClienteId]=useState(initClienteId||clientes[0]?.id||"");
-  const [tab,setTab]=useState("mensual");
-  const TPL={mensual:["Verificación del funcionamiento general","Limpieza y/o sustitución de filtros de aire","Comprobación de presiones de trabajo","Revisión de ruidos y vibraciones anómalas","Verificación de temperaturas de impulsión y retorno","Comprobación de mandos y termostatos","Revisión de la presión del circuito de agua","Verificación de ausencia de fugas"],trimestral:["Todas las revisiones del mantenimiento mensual","Limpieza de evaporadores y condensadores","Revisión y engrase de partes móviles","Comprobación del circuito eléctrico y conexiones","Verificación de la carga de gas refrigerante","Limpieza de bandejas y sistema de condensados","Limpieza del quemador y revisión de electrodos","Comprobación de la combustión y rendimiento"],semestral:["Todas las revisiones del mantenimiento trimestral","Revisión completa del circuito frigorífico","Comprobación de válvulas de seguridad y expansión","Revisión del intercambiador de calor","Inspección del sistema eléctrico completo","Revisión del aislamiento de tuberías y conductos","Comprobación del rendimiento energético","Revisión del sistema de evacuación de humos"],anual:["Todas las revisiones del mantenimiento semestral","Análisis de refrigerante (pureza, humedad y carga)","Prueba de estanqueidad del circuito frigorífico","Revisión completa de cuadros y protecciones eléctricas","Sustitución de filtros y elementos de desgaste","Análisis y ajuste de la combustión (CO, CO2, O2)","Revisión completa de la caldera y elementos de seguridad","Elaboración de informe técnico completo"]};
-  const [form,setForm]=useState(()=>inst?{...inst,_isEdit:true}:{nombre:"",tipo:"Caldera",ubicacion:"",descripcion:"",items_mensual:[...TPL.mensual],items_trimestral:[...TPL.trimestral],items_semestral:[...TPL.semestral],items_anual:[...TPL.anual],activa_mensual:false,activa_trimestral:false,activa_semestral:false,activa_anual:false,proxima_mensual:"",proxima_trimestral:"",proxima_semestral:"",proxima_anual:""});
-  const upd=(k,v)=>setForm(p=>({...p,[k]:v}));
-  function addItem(tipo){ const k="_new_"+tipo; const v=(form[k]||"").trim(); if(!v)return; setForm(p=>({...p,["items_"+tipo]:[...p["items_"+tipo],v],[k]:""})); }
-  function removeItem(tipo,i){ setForm(p=>({...p,["items_"+tipo]:p["items_"+tipo].filter((_,j)=>j!==i)})); }
-  return (<Modal onClose={onClose} w={620} zIndex={300}><MHead title={isEdit?"Editar instalación":"Nueva instalación"} onClose={onClose}/>
-    <div style={{ padding:isMobile?"16px 14px":"18px 22px",display:"flex",flexDirection:"column",gap:14 }}>
-      <ClienteSelector clientes={clientes} value={clienteId} onChange={setClienteId} onNewCliente={async(f)=>{ const {data:nc,error}=await supabase.from("clientes").insert([f]).select().single(); if(!error&&nc) setClienteId(nc.id); else alert("Error: "+(error?.message||"")); }}/>
-    <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12 }}>
-        <Field label="Nombre *"><input value={form.nombre} onChange={e=>upd("nombre",e.target.value)} style={inp()} placeholder="Caldera principal"/></Field>
-        <Field label="Tipo"><select value={form.tipo} onChange={e=>upd("tipo",e.target.value)} style={inp()}>{"Caldera,Split,Bomba de calor,Fan-coil,Climatizador,Enfriadora,VRV/VRF,Recuperador,Otro".split(",").map(t=><option key={t}>{t}</option>)}</select></Field>
-        <Field label="Ubicación"><input value={form.ubicacion} onChange={e=>upd("ubicacion",e.target.value)} style={inp()} placeholder="Sala de calderas..."/></Field>
-        <Field label="Modelo"><input value={form.descripcion} onChange={e=>upd("descripcion",e.target.value)} style={inp()} placeholder="Junkers Cerapur 35kW"/></Field>
-      </div>
-      <div style={{ background:T.surface,borderRadius:10,padding:"14px",border:`1px solid ${T.border}` }}>
-        <div style={{ fontSize:11,fontWeight:600,color:T.sub,marginBottom:12 }}>Tipos de mantenimiento</div>
-        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
-          {MT_TIPOS.map(tipo=>{ const mt=MT[tipo]; const active=form["activa_"+tipo]; return <div key={tipo} style={{ border:`2px solid ${active?mt.color:T.border}`,borderRadius:10,padding:"10px 12px",background:active?mt.color+"08":"transparent" }}>
-            <div style={{ display:"flex",alignItems:"center",gap:8,cursor:"pointer",marginBottom:active?10:0 }} onClick={()=>upd("activa_"+tipo,!active)}>
-              <div style={{ width:18,height:18,borderRadius:4,border:`2px solid ${active?mt.color:T.border}`,background:active?mt.color:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>{active&&<svg width="10" height="10" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>}</div>
-              <span style={{ fontSize:13,fontWeight:600,color:active?mt.color:T.sub }}>{mt.label}</span>
+function InstModal({ initClienteId, inst, clientes, data, refresh, onClose }) {
+  const isMobile = useIsMobile();
+  const isEdit = !!inst;
+  const [clienteId, setClienteId] = useState(initClienteId || inst?.cliente_id || null);
+  const [form, setForm] = useState({
+    nombre: inst?.nombre || "",
+    notas: inst?.notas || "",
+    activo: inst?.activo !== false,
+  });
+  const [equipos, setEquipos] = useState([]);
+  const [showAddEquipo, setShowAddEquipo] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedInstId, setSavedInstId] = useState(inst?.id || null);
+
+  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+
+  const saveContrato = async () => {
+    if(!clienteId){ alert("Selecciona un cliente"); return; }
+    if(!form.nombre.trim()){ alert("El nombre del contrato es obligatorio"); return; }
+    setSaving(true);
+    const clean = { nombre: form.nombre, notas: form.notas||null, activo: form.activo };
+    if(isEdit){
+      await supabase.from("instalaciones").update(clean).eq("id", inst.id);
+      setSaving(false);
+      refresh?.(); onClose();
+    } else {
+      const { data: newInst, error } = await supabase.from("instalaciones")
+        .insert([{ ...clean, cliente_id: clienteId }]).select().single();
+      setSaving(false);
+      if(error){ alert("Error: "+error.message); return; }
+      setSavedInstId(newInst.id);
+      refresh?.();
+    }
+  };
+
+  const eliminar = async () => {
+    if(!window.confirm("¿Eliminar este contrato?")) return;
+    await supabase.from("equipos").update({ instalacion_id: null }).eq("instalacion_id", inst.id);
+    await supabase.from("revisiones").delete().eq("instalacion_id", inst.id);
+    await supabase.from("instalaciones").delete().eq("id", inst.id);
+    refresh?.(); onClose();
+  };
+
+  return (
+    <Modal onClose={onClose} w={620}>
+      <MHead title={isEdit ? "Editar contrato" : "Nuevo contrato"} onClose={onClose}/>
+      <div style={{padding: isMobile?"14px":"20px 24px", display:"flex",
+        flexDirection:"column", gap:14, maxHeight:"85vh", overflowY:"auto"}}>
+
+        {/* Cliente */}
+        <ClienteSelector clientes={clientes} value={clienteId} onChange={setClienteId}
+          onNewCliente={async(f)=>{
+            const {data:nc,error} = await supabase.from("clientes").insert([f]).select().single();
+            if(!error&&nc) setClienteId(nc.id);
+            else alert("Error: "+(error?.message||""));
+          }}/>
+
+        {/* Nombre y notas */}
+        <div>
+          <div style={{fontSize:11,color:T.muted,marginBottom:4,fontWeight:600}}>NOMBRE DEL CONTRATO *</div>
+          <input value={form.nombre} onChange={e=>upd("nombre",e.target.value)}
+            placeholder="Ej: Mantenimiento anual calderas..." style={inp()}/>
+        </div>
+        <div>
+          <div style={{fontSize:11,color:T.muted,marginBottom:4,fontWeight:600}}>NOTAS</div>
+          <textarea value={form.notas} onChange={e=>upd("notas",e.target.value)}
+            placeholder="Observaciones, condiciones especiales..."
+            style={{...inp(), minHeight:60}}/>
+        </div>
+
+        {/* Toggle activo */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+          padding:"12px 14px",background:T.surface,borderRadius:10,border:`1px solid ${T.border}`}}>
+          <span style={{fontSize:13,fontWeight:600,color:T.text}}>Contrato activo</span>
+          <button onClick={()=>upd("activo",!form.activo)}
+            style={{width:44,height:24,borderRadius:12,position:"relative",border:"none",
+              background: form.activo ? T.accent : T.border,cursor:"pointer",transition:"all 0.2s"}}>
+            <div style={{position:"absolute",top:2,
+              left: form.activo ? 22 : 2,width:20,height:20,
+              borderRadius:"50%",background:"#fff",transition:"all 0.2s"}}/>
+          </button>
+        </div>
+
+        {/* Botón guardar contrato */}
+        {!savedInstId && (
+          <button onClick={saveContrato} disabled={saving}
+            style={{padding:"11px",borderRadius:10,border:"none",
+              background: saving ? T.border : T.accent,
+              color:"#fff",cursor:saving?"not-allowed":"pointer",
+              fontSize:14,fontWeight:700}}>
+            {saving ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear contrato"}
+          </button>
+        )}
+
+        {/* Sección equipos — aparece tras crear el contrato o en edición */}
+        {(savedInstId) && (
+          <div style={{borderTop:`1px solid ${T.border}`,paddingTop:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <div style={{fontSize:11,fontWeight:700,color:T.muted,letterSpacing:1}}>
+                EQUIPOS ({equipos.length})
+              </div>
+              <button onClick={()=>setShowAddEquipo(true)}
+                style={{padding:"7px 14px",borderRadius:8,border:"none",
+                  background:T.accent,color:"#fff",cursor:"pointer",
+                  fontSize:12,fontWeight:600}}>
+                + Añadir equipo
+              </button>
             </div>
-            {active&&<Field label="Próxima visita"><input type="date" value={form["proxima_"+tipo]||""} onChange={e=>upd("proxima_"+tipo,e.target.value)} style={inp({padding:"5px 8px",fontSize:12})}/></Field>}
-          </div>; })}
-        </div>
+
+            {equipos.length===0 && !showAddEquipo && (
+              <div onClick={()=>setShowAddEquipo(true)}
+                style={{textAlign:"center",padding:"24px",color:T.muted,fontSize:13,
+                  background:T.surface,borderRadius:10,
+                  border:`2px dashed ${T.border}`,cursor:"pointer"}}>
+                Sin equipos. Pulsa para añadir el primero.
+              </div>
+            )}
+
+            {equipos.map((eq,i)=>(
+              <div key={i} style={{background:T.surface,borderRadius:10,padding:"10px 14px",
+                border:`1px solid ${T.border}`,marginBottom:8,
+                display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontWeight:600,fontSize:13,color:T.text}}>{eq.nombre}</div>
+                  <div style={{fontSize:11,color:T.muted,marginTop:2}}>
+                    {[TIPO_EQUIPO_OPTIONS.find(t=>t.value===eq.tipo)?.label,
+                      eq.marca, eq.modelo].filter(Boolean).join(" · ")}
+                  </div>
+                  <div style={{fontSize:11,color:T.accent,marginTop:2}}>
+                    {["mensual","trimestral","semestral","anual"]
+                      .filter(t=>eq["activa_"+t])
+                      .map(t=>MT[t]?.label||t).join(" · ")}
+                  </div>
+                </div>
+                <button onClick={()=>setEquipos(p=>p.filter((_,j)=>j!==i))}
+                  style={{background:"none",border:"none",color:T.red,
+                    cursor:"pointer",fontSize:18,padding:"0 4px"}}>×</button>
+              </div>
+            ))}
+
+            {showAddEquipo && (
+              <NuevoEquipoModal
+                clienteId={clienteId}
+                instalacionId={savedInstId}
+                onSave={()=>{
+                  refresh?.();
+                  setShowAddEquipo(false);
+                  // Recarga equipos de esta instalación
+                  supabase.from("equipos")
+                    .select("*")
+                    .eq("instalacion_id", savedInstId)
+                    .then(({data:eqs})=>setEquipos(eqs||[]));
+                }}
+                onClose={()=>setShowAddEquipo(false)}
+              />
+            )}
+
+            <button onClick={onClose}
+              style={{width:"100%",padding:"11px",borderRadius:10,marginTop:8,
+                border:`1px solid ${T.border}`,background:T.surface,
+                color:T.text,cursor:"pointer",fontSize:13,fontWeight:600}}>
+              Cerrar
+            </button>
+          </div>
+        )}
+
+        {/* Botones edición */}
+        {isEdit && !savedInstId && (
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={eliminar}
+              style={{padding:"10px 16px",borderRadius:8,border:`1px solid ${T.red}40`,
+                background:T.redLight,color:T.red,cursor:"pointer",fontSize:13,fontWeight:600}}>
+              Eliminar
+            </button>
+            <button onClick={onClose}
+              style={{flex:1,padding:"10px",borderRadius:8,border:`1px solid ${T.border}`,
+                background:T.surface,color:T.text,cursor:"pointer",fontSize:13}}>
+              Cancelar
+            </button>
+          </div>
+        )}
       </div>
-      <div style={{ background:T.surface,borderRadius:10,padding:"14px",border:`1px solid ${T.border}` }}>
-        <div style={{ fontSize:11,fontWeight:600,color:T.sub,marginBottom:10 }}>Checklist</div>
-        <div style={{ display:"flex",gap:6,marginBottom:12,overflowX:"auto" }}>{MT_TIPOS.map(tipo=>{ const mt=MT[tipo]; const a=tab===tipo; return <button key={tipo} onClick={()=>setTab(tipo)} style={{ padding:"4px 12px",borderRadius:20,border:`1px solid ${a?mt.color:T.border}`,background:a?mt.color+"22":T.card,color:a?mt.color:T.sub,fontSize:11,fontWeight:a?600:400,cursor:"pointer",whiteSpace:"nowrap" }}>{mt.label}</button>; })}</div>
-        <div style={{ maxHeight:180,overflowY:"auto",display:"flex",flexDirection:"column",gap:4,marginBottom:8 }}>
-          {(form["items_"+tab]||[]).map((item,i)=><div key={i} style={{ display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:T.card,borderRadius:6,border:`1px solid ${T.border}` }}><span style={{ fontSize:12,color:T.sub,flex:1 }}>{item}</span><button onClick={()=>removeItem(tab,i)} style={{ background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:14 }}>×</button></div>)}
-        </div>
-        <div style={{ display:"flex",gap:8 }}><input value={form["_new_"+tab]||""} onChange={e=>upd("_new_"+tab,e.target.value)} onKeyDown={e=>e.key==="Enter"&&addItem(tab)} style={{...inp({flex:1,fontSize:12,padding:"7px 10px"})}} placeholder="Añadir punto..."/><Btn ch="+" onClick={()=>addItem(tab)} v="p" sm/></div>
-      </div>
-      <div style={{ display:"flex",justifyContent:"space-between" }}>
-        {isEdit?<Btn ch="Eliminar" onClick={()=>onDel(form.id)} v="d" sm/>:<div/>}
-        <div style={{ display:"flex",gap:8 }}><Btn ch="Cancelar" onClick={onClose} v="g"/><Btn ch={isEdit?"Guardar cambios":"Crear instalación"} onClick={()=>onSave({...form, cliente_id:clienteId})} disabled={!form.nombre.trim()||!clienteId}/></div>
-      </div>
-    </div>
-  </Modal>);
+    </Modal>
+  );
 }
 
-function RevisionModal({ inst, cliente, tipo, user, onSave, onClose }) {
-  const mt=MT[tipo]||{label:tipo,color:T.teal,freq:30}; const items=(inst?.["items_"+tipo])||[];
+function RevisionModal({ inst, eq, cliente, tipo, user, onSave, onClose }) {
+  const mt=MT[tipo]||{label:tipo,color:T.teal,freq:30}; const items=((eq||inst)?.["items_"+tipo])||[];
   const [checks,setChecks]=useState(()=>{ const c={}; items.forEach((_,i)=>{c[i]=false;}); return c; }); const [obs,setObs]=useState(""); const [firma,setFirma]=useState(null); const [saving,setSaving]=useState(false);
   const cRef=useRef(); const dr=useRef(false); const [hasFirma,setHasFirma]=useState(false);
   useEffect(()=>{ const c=cRef.current; if(!c)return; const ctx=c.getContext("2d"); ctx.fillStyle=T.card; ctx.fillRect(0,0,c.width,c.height); },[]);
@@ -5178,7 +5927,7 @@ function RevisionModal({ inst, cliente, tipo, user, onSave, onClose }) {
   async function save(){
     setSaving(true);
     const { data:cnt }=await supabase.rpc("siguiente_parte");
-    const rev={ instalacion_id:inst.id, instalacion_nombre:inst.nombre, cliente_id:cliente.id, cliente_nombre:cliente.nombre, tecnico_id:user.id, tecnico_nombre:user.nombre, tipo, fecha:todayStr(), checks, observaciones:obs, firma_url:firma, num_parte:cnt||"00001" };
+    const rev={ instalacion_id:inst.id, instalacion_nombre:inst.nombre, equipo_id:eq?.id||null, equipo_nombre:eq?.nombre||inst.nombre, cliente_id:cliente.id, cliente_nombre:cliente.nombre, tecnico_id:user.id, tecnico_nombre:user.nombre, tipo, fecha:todayStr(), checks, observaciones:obs, firma_url:firma, num_parte:cnt||"00001" };
     await onSave(rev);
     setSaving(false);
   }
@@ -5900,13 +6649,14 @@ function EmpresaConfig({ empresa, setEmpresa }) {
    SECCIÓN INSTALACIONES — Trabajos de instalación nuevos
    ══════════════════════════════════════════════════════════════════════════ */
 
-const OB_ESTADOS = {
+const mkOB_ESTADOS = SC => ({
   pendiente:           { label:"Pendiente",         color:SC.pendiente },
   en_curso:            { label:"En curso",          color:SC.en_curso },
   completada:          { label:"Completada",        color:SC.completada },
   pendiente_facturar:  { label:"Pend. facturar",    color:SC.pendiente_facturar },
   facturada:           { label:"Facturada",         color:SC.facturada },
-};
+});
+let OB_ESTADOS = mkOB_ESTADOS(SC_LIGHT);
 
 function NuevaObraModal({ data, user, techs, refresh, onClose, presupuestoId }) {
   const isMobile = useIsMobile();
@@ -6336,7 +7086,7 @@ function InstalacionesObrasView({ data, user, techs, refresh, empresa }) {
       </div>
 
       <div style={{ display:"flex",gap:6,marginBottom:14,overflowX:"auto",paddingBottom:4 }}>
-        {filtros.map(f=>{ const isAct=filter===f.key; return <button key={f.key} onClick={()=>setFilter(f.key)} style={{ display:"inline-flex",alignItems:"center",gap:5,padding:"6px 14px",borderRadius:20,border:`1px solid ${isAct?f.color:T.border}`,background:isAct?f.color+"22":T.card,color:isAct?f.color:T.sub,fontSize:12,fontWeight:isAct?700:400,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'DM Sans',sans-serif" }}>{f.label}<span style={{ minWidth:18,height:18,borderRadius:9,background:f.color,color:"#fff",fontSize:10,fontWeight:700,display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 5px",lineHeight:1,flexShrink:0 }}>{f.items.length}</span></button>; })}
+        {filtros.map(f=>{ const isAct=filter===f.key; return <button key={f.key} onClick={()=>setFilter(f.key)} style={{ display:"inline-flex",alignItems:"center",gap:5,padding:"6px 14px",borderRadius:20,border:isAct?`1px solid ${f.color}`:`1.5px solid ${f.color+"88"}`,background:isAct?f.color+"22":T.card,color:isAct?f.color:T.sub,fontSize:12,fontWeight:isAct?700:400,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'DM Sans',sans-serif" }}>{f.label}<span style={{ minWidth:18,height:18,borderRadius:9,background:f.color,color:"#fff",fontSize:10,fontWeight:700,display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 5px",lineHeight:1,flexShrink:0 }}>{f.items.length}</span></button>; })}
       </div>
 
       <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
@@ -6358,6 +7108,7 @@ function InstalacionesObrasView({ data, user, techs, refresh, empresa }) {
               </div>
               <div style={{ display:"flex",alignItems:"center",gap:6 }}>
                 <span style={{ padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:(s?.color||T.muted)+"15",color:s?.color||T.muted }}>{s?.label||o.status}</span>
+                <span style={{ fontSize:11, color:T.muted, marginLeft:6 }}>{new Date(o.created_at).toLocaleDateString("es-ES")}</span>
                 {c?.telefono&&<a href={`https://wa.me/34${c.telefono.replace(/\s/g,"")}`} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{ width:30,height:30,borderRadius:7,background:T.greenLight,border:"1.5px solid "+T.border,display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none" }}><svg width="13" height="13" viewBox="0 0 24 24" fill={T.green}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>}
                 {c?.telefono&&<a href={`tel:${c.telefono}`} onClick={e=>e.stopPropagation()} style={{ width:30,height:30,borderRadius:7,background:T.greenLight,border:"1.5px solid "+T.border,display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.green} strokeWidth="2" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg></a>}
                 {o.direccion&&<button onClick={e=>{ e.stopPropagation(); openMaps(o.direccion); }} style={{ width:30,height:30,borderRadius:7,background:T.accentLight,border:"1.5px solid "+T.accent+"40",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></button>}
@@ -7258,6 +8009,11 @@ export default function App() {
   const searchVoiceRef = useRef(false);
   const [searchVoiceActive, setSearchVoiceActive] = useState(false);
   T = darkMode ? T_DARK : T_LIGHT;
+  let SC = darkMode ? SC_DARK : SC_LIGHT;
+  BS = mkBS(SC);
+  MS = mkMS(SC);
+  PS = mkPS(SC);
+  OB_ESTADOS = mkOB_ESTADOS(SC);
 
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>{ if(session) loadUser(session.user.id); });
