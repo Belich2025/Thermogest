@@ -5423,7 +5423,6 @@ function MantenimientoView({ data, user, refresh, empresa={} }) {
         );})}
       </div>}
       {tab==="contratos"&&<div style={{ display:"flex",flexDirection:"column",gap:10 }}>
-        {isAdmin&&<div style={{ display:"flex",justifyContent:"flex-end",marginBottom:4 }}><Btn ch="+ Nuevo contrato" onClick={()=>setShowInst({clienteId:cls[0]?.id})} v="p" sm/></div>}
         {cls.filter(c=>insts.some(i=>i.cliente_id===c.id)).length===0&&<div style={{ textAlign:"center",padding:"60px 20px",color:T.muted,fontSize:14 }}>No hay contratos. Pulsa "+ Nuevo contrato" para añadir uno.</div>}
         {cls.filter(c=>{ const cInsts=insts.filter(i=>i.cliente_id===c.id); return cInsts.length>0; }).map(c=>{ const cInsts=insts.filter(i=>i.cliente_id===c.id); const exp=expanded===c.id; return <div key={c.id} style={{ background:T.card,border:`1px solid ${T.border}`,borderRadius:11,overflow:"hidden" }}>
           <div onClick={()=>setExpanded(exp?null:c.id)} style={{ display:"flex",alignItems:"center",gap:14,padding:"13px 16px",cursor:"pointer" }} onMouseEnter={e=>e.currentTarget.style.background=T.surface} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
