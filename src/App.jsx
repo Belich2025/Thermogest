@@ -749,6 +749,7 @@ function AveriaDetalle({ averia:initA, data, user, techs, empresa, refresh, onCl
   const [notas, setNotas]     = useState([]);
   const [partes, setPartes]   = useState([]);
   const [fotos, setFotos]     = useState([]);
+  const [fotoAmpliada, setFotoAmpliada] = useState(null);
   const [nota, setNota]       = useState("");
   const [showParte, setShowParte] = useState(false);
   const [showEquipoHistorial, setShowEquipoHistorial] = useState(false);
@@ -783,8 +784,30 @@ function AveriaDetalle({ averia:initA, data, user, techs, empresa, refresh, onCl
   }
 
   async function subirFoto(e) {
-    const files=Array.from(e.target.files).slice(0,4-fotos.length);
-    for(const file of files){ const ext=file.name.split(".").pop(); const path=`averias/${averia.id}/${Date.now()}.${ext}`; const {error}=await supabase.storage.from("fotos").upload(path,file,{upsert:false}); if(!error) await supabase.from("fotos_averias").insert([{averia_id:averia.id,storage_path:path}]); }
+    const files = Array.from(e.target.files).slice(0, 4 - fotos.length);
+    for(const file of files) {
+      // Comprimir imagen antes de subir
+      const compressed = await new Promise(resolve => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const maxW = 1200;
+          const scale = Math.min(1, maxW / img.width);
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(blob => { URL.revokeObjectURL(url); resolve(blob); }, "image/jpeg", 0.7);
+        };
+        img.src = url;
+      });
+      const ext = "jpg";
+      const path = `averias/${averia.id}/${Date.now()}.${ext}`;
+      const {error} = await supabase.storage.from("fotos").upload(path, compressed, {
+        upsert:false, contentType:"image/jpeg"
+      });
+      if(!error) await supabase.from("fotos_averias").insert([{averia_id:averia.id, storage_path:path}]);
+    }
     loadFotos(); e.target.value="";
   }
 
@@ -970,11 +993,12 @@ function AveriaDetalle({ averia:initA, data, user, techs, empresa, refresh, onCl
         {tab==="fotos"&&(
           <div>
             <div style={{ display:"flex",justifyContent:"space-between",marginBottom:10 }}>
+              <input ref={fileRef} type="file" accept="image/*" capture="environment" multiple style={{display:"none"}} onChange={subirFoto}/>
               <span style={{ fontSize:12,color:T.sub }}>{fotos.length}/4 fotos</span>
               {fotos.length<4&&<Btn ch="Añadir foto" onClick={()=>fileRef.current.click()} v="g" sm/>}
             </div>
             {fotos.length===0?<div onClick={()=>fileRef.current.click()} style={{ border:`2px dashed ${T.border}`,borderRadius:10,padding:30,textAlign:"center",cursor:"pointer",color:T.muted }}>Pulsa para añadir fotos</div>
-            :<div style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8 }}>{fotos.map(f=><div key={f.id} style={{ position:"relative",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",border:`1px solid ${T.border}` }}><img src={getFotoUrl(f.storage_path)} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/><button onClick={async()=>{ await supabase.storage.from("fotos").remove([f.storage_path]); await supabase.from("fotos_averias").delete().eq("id",f.id); loadFotos(); }} style={{ position:"absolute",top:6,right:6,width:26,height:26,borderRadius:"50%",background:"rgba(0,0,0,0.6)",border:"none",color:"#fff",cursor:"pointer" }}>×</button></div>)}</div>}
+            :<div style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8 }}>{fotos.map(f=><div key={f.id} style={{ position:"relative",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",border:`1px solid ${T.border}` }}><img src={getFotoUrl(f.storage_path)} alt="" onClick={()=>setFotoAmpliada(getFotoUrl(f.storage_path))} style={{ width:"100%",height:"100%",objectFit:"cover",cursor:"pointer" }}/><button onClick={async()=>{ await supabase.storage.from("fotos").remove([f.storage_path]); await supabase.from("fotos_averias").delete().eq("id",f.id); loadFotos(); }} style={{ position:"absolute",top:6,right:6,width:26,height:26,borderRadius:"50%",background:"rgba(0,0,0,0.6)",border:"none",color:"#fff",cursor:"pointer" }}>×</button></div>)}</div>}
           </div>
         )}
 
@@ -986,10 +1010,25 @@ function AveriaDetalle({ averia:initA, data, user, techs, empresa, refresh, onCl
             <div style={{ display:"flex",gap:8,alignItems:"flex-end" }}>
               <textarea ref={notaRef} value={nota} onChange={e=>setNota(e.target.value)} placeholder="Añadir nota técnica..." style={{...inp(),flex:1,minHeight:60,resize:"none"}} onKeyDown={e=>{ if(e.key==="Enter"&&e.ctrlKey) addNota(); }}/>
               <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
-                {voiceActive
-                  ? <button onClick={()=>window.__stopVoice&&window.__stopVoice()} style={{ padding:"0 8px",height:36,borderRadius:8,border:"none",background:"#dc2626",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'DM Sans',sans-serif",fontSize:11,fontWeight:700,whiteSpace:"nowrap",animation:"pulse-red 1.5s infinite" }}>⏹ Parar</button>
-                  : <button onClick={startVoice} title="Dictado por voz" style={{ width:36,height:36,borderRadius:8,border:"none",background:"linear-gradient(135deg,#3b82f6,#8b5cf6)",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700 }}>✦ IA</button>
-                }
+                <button onClick={()=>{
+                  if(!('webkitSpeechRecognition' in window||'SpeechRecognition' in window)){
+                    alert("Tu navegador no soporta el micrófono"); return;
+                  }
+                  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+                  const r = new SR();
+                  r.lang="es-ES"; r.continuous=false; r.interimResults=false;
+                  r.onresult=e=>{ setNota(p=>(p?p+" ":"")+e.results[0][0].transcript); };
+                  r.start();
+                }} style={{
+                  width:36, height:36, borderRadius:8, border:`1px solid ${T.border}`,
+                  background:T.surface, cursor:"pointer", display:"flex",
+                  alignItems:"center", justifyContent:"center", flexShrink:0
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.text} strokeWidth="2">
+                    <rect x="9" y="2" width="6" height="11" rx="3"/>
+                    <path d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
+                  </svg>
+                </button>
                 <Btn ch="OK" onClick={()=>addNota()} disabled={!nota.trim()}/>
               </div>
             </div>
@@ -1016,6 +1055,19 @@ function AveriaDetalle({ averia:initA, data, user, techs, empresa, refresh, onCl
           refresh={refresh}
           onClose={()=>setShowEquipoHistorial(false)}
         />
+      )}
+      {fotoAmpliada && (
+        <div onClick={()=>setFotoAmpliada(null)}
+          style={{position:"fixed",top:0,left:0,width:"100vw",height:"100vh",
+            background:"#000000dd",zIndex:2000,display:"flex",
+            alignItems:"center",justifyContent:"center",cursor:"zoom-out"}}>
+          <img src={fotoAmpliada} alt=""
+            style={{maxWidth:"95vw",maxHeight:"95vh",objectFit:"contain",borderRadius:8}}
+            onClick={e=>e.stopPropagation()}/>
+          <button onClick={()=>setFotoAmpliada(null)}
+            style={{position:"absolute",top:20,right:20,background:"none",
+              border:"none",color:"#fff",fontSize:32,cursor:"pointer",lineHeight:1}}>×</button>
+        </div>
       )}
     </Modal>
   );
