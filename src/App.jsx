@@ -3648,54 +3648,359 @@ function ClientesList({ data, refresh, user }) {
    EQUIPOS — Historial de máquinas
    ══════════════════════════════════════════════════════════════════════════ */
 
-function NuevoEquipoModal({ clienteId, onSave, onClose }) {
+const RITE_CHECKLIST = {
+  caldera_gas: [
+    "Revisión y limpieza del quemador de gas",
+    "Verificación presión de gas en quemador",
+    "Limpieza del intercambiador de calor",
+    "Verificación presión del circuito hidráulico",
+    "Control temperatura gases de combustión",
+    "Análisis de combustión (CO, CO2, O2)",
+    "Revisión válvula de seguridad",
+    "Comprobación vaso de expansión",
+    "Verificación estanqueidad circuito gas",
+    "Revisión sistema de evacuación de humos",
+    "Verificación funcionamiento termostatos y sondas",
+  ],
+  caldera_gasoil: [
+    "Revisión y limpieza del quemador de gasoil",
+    "Limpieza y sustitución filtro de gasoil",
+    "Purga del circuito de combustible",
+    "Limpieza del intercambiador de calor",
+    "Verificación presión del circuito hidráulico",
+    "Control temperatura gases de combustión",
+    "Análisis de combustión (CO, CO2, O2)",
+    "Revisión válvula de seguridad",
+    "Comprobación vaso de expansión",
+    "Revisión sistema de evacuación de humos",
+    "Verificación funcionamiento termostatos y sondas",
+  ],
+  caldera_biomasa: [
+    "Limpieza del hogar y cenicero",
+    "Revisión sistema de alimentación de combustible",
+    "Limpieza del intercambiador de calor",
+    "Verificación presión del circuito hidráulico",
+    "Control temperatura gases de combustión",
+    "Revisión válvula de seguridad",
+    "Comprobación vaso de expansión",
+    "Revisión sistema de evacuación de humos y extractor",
+    "Verificación silo/depósito de combustible",
+    "Verificación funcionamiento termostatos y sondas",
+  ],
+  split: [
+    "Limpieza de filtros unidad interior",
+    "Limpieza de evaporador",
+    "Limpieza de condensador unidad exterior",
+    "Verificación carga de gas refrigerante",
+    "Comprobación temperaturas entrada/salida",
+    "Revisión y limpieza bandeja de drenaje",
+    "Verificación funcionamiento eléctrico y mandos",
+    "Comprobación presiones de trabajo",
+    "Revisión estado físico unidades interior/exterior",
+  ],
+  bomba_calor: [
+    "Limpieza de filtros",
+    "Verificación carga de gas refrigerante",
+    "Comprobación presiones circuito",
+    "Revisión intercambiador",
+    "Verificación funcionamiento reversible calor/frío",
+    "Control temperaturas entrada/salida",
+    "Revisión elementos eléctricos",
+    "Comprobación resistencia auxiliar",
+  ],
+  fancoil: [
+    "Limpieza de filtros",
+    "Limpieza de batería",
+    "Verificación válvula de control de agua",
+    "Comprobación caudal de agua",
+    "Revisión bandeja de condensados",
+    "Verificación funcionamiento eléctrico y velocidades",
+    "Comprobación termostato ambiente",
+  ],
+  climatizador: [
+    "Limpieza de filtros entrada/salida",
+    "Revisión baterías de frío y calor",
+    "Verificación humectador si existe",
+    "Comprobación caudales de aire",
+    "Revisión correas y rodamientos ventiladores",
+    "Verificación compuertas de mezcla",
+    "Control temperatura y humedad de impulsión",
+    "Revisión bandeja de condensados",
+  ],
+  enfriadora: [
+    "Limpieza condensador",
+    "Verificación presiones de refrigerante",
+    "Comprobación temperaturas entrada/salida agua",
+    "Revisión bomba de circulación",
+    "Verificación torre de refrigeración si existe",
+    "Control nivel de anticongelante",
+    "Revisión elementos de seguridad",
+    "Comprobación aislamiento tuberías",
+  ],
+  vrv_vrf: [
+    "Verificación unidad exterior",
+    "Comprobación presiones circuito refrigerante",
+    "Limpieza filtros unidades interiores",
+    "Verificación control centralizado",
+    "Comprobación temperaturas de trabajo",
+    "Revisión conexiones eléctricas",
+    "Verificación reparto de carga entre unidades",
+  ],
+  recuperador: [
+    "Limpieza filtros entrada y salida",
+    "Verificación bypass y compuertas",
+    "Comprobación rendimiento del recuperador",
+    "Revisión correas si tiene",
+    "Verificación caudales de aire impulsión/retorno",
+    "Limpieza del núcleo recuperador",
+    "Control presostatos diferenciales",
+  ],
+};
+
+const TIPO_EQUIPO_OPTIONS = [
+  { label:"Caldera Gas",     value:"caldera_gas" },
+  { label:"Caldera Gasoil",  value:"caldera_gasoil" },
+  { label:"Caldera Biomasa", value:"caldera_biomasa" },
+  { label:"Split",           value:"split" },
+  { label:"Bomba de calor",  value:"bomba_calor" },
+  { label:"Fan-coil",        value:"fancoil" },
+  { label:"Climatizador",    value:"climatizador" },
+  { label:"Enfriadora",      value:"enfriadora" },
+  { label:"VRV/VRF",         value:"vrv_vrf" },
+  { label:"Recuperador",     value:"recuperador" },
+  { label:"Otro",            value:"otro" },
+];
+
+function NuevoEquipoModal({ clienteId, instalacionId, onSave, onClose }) {
   const isMobile = useIsMobile();
   const [form, setForm] = useState({
-    nombre:"", marca:"", modelo:"", numero_serie:"",
-    año_instalacion:"", direccion:"", ubicacion:"", notas:""
+    nombre: "", tipo: "", marca: "", modelo: "",
+    potencia: "", numero_serie: "", año_fabricacion: "",
+    ubicacion: "", notas: "",
   });
-  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+  const [periodicidad, setPeriodicidad] = useState({
+    mensual: false, trimestral: false, semestral: false, anual: false
+  });
+  const [proximas, setProximas] = useState({
+    mensual: "", trimestral: "", semestral: "", anual: ""
+  });
+  const [checklist, setChecklist] = useState([]);
+  const [nuevoItem, setNuevoItem] = useState("");
   const [saving, setSaving] = useState(false);
 
-  async function save() {
-    if(!form.nombre.trim()) return;
+  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+
+  // Al cambiar tipo de equipo carga checklist RITE automáticamente
+  const onTipoChange = (tipo) => {
+    upd("tipo", tipo);
+    const items = RITE_CHECKLIST[tipo] || [];
+    setChecklist(items.map(item => ({ texto: item, activo: true })));
+  };
+
+  const toggleItem = (i) => {
+    setChecklist(p => p.map((it,idx) => idx===i ? {...it, activo:!it.activo} : it));
+  };
+
+  const addItem = () => {
+    if(!nuevoItem.trim()) return;
+    setChecklist(p => [...p, { texto: nuevoItem.trim(), activo: true }]);
+    setNuevoItem("");
+  };
+
+  const removeItem = (i) => {
+    setChecklist(p => p.filter((_,idx) => idx!==i));
+  };
+
+  const save = async () => {
+    if(!form.nombre.trim()){ alert("El nombre del equipo es obligatorio"); return; }
     setSaving(true);
-    const { error } = await supabase.from("equipos").insert([{
+    const itemsGuardar = checklist.filter(it=>it.activo).map(it=>it.texto);
+    const payload = {
       cliente_id: clienteId,
-      nombre: form.nombre.trim(),
+      instalacion_id: instalacionId||null,
+      nombre: form.nombre,
+      tipo: form.tipo||null,
       marca: form.marca||null,
       modelo: form.modelo||null,
+      potencia: form.potencia||null,
       numero_serie: form.numero_serie||null,
-      año_instalacion: form.año_instalacion ? parseInt(form.año_instalacion) : null,
-      direccion: form.direccion||null,
+      año_instalacion: form.año_fabricacion ? parseInt(form.año_fabricacion) : null,
       ubicacion: form.ubicacion||null,
       notas: form.notas||null,
-    }]);
-    if(!error) { onSave(); onClose(); }
-    else alert("Error: "+error.message);
+      activa_mensual: periodicidad.mensual,
+      activa_trimestral: periodicidad.trimestral,
+      activa_semestral: periodicidad.semestral,
+      activa_anual: periodicidad.anual,
+      proxima_mensual: proximas.mensual||null,
+      proxima_trimestral: proximas.trimestral||null,
+      proxima_semestral: proximas.semestral||null,
+      proxima_anual: proximas.anual||null,
+      items_mensual: periodicidad.mensual ? itemsGuardar : [],
+      items_trimestral: periodicidad.trimestral ? itemsGuardar : [],
+      items_semestral: periodicidad.semestral ? itemsGuardar : [],
+      items_anual: periodicidad.anual ? itemsGuardar : [],
+    };
+    const { error } = await supabase.from("equipos").insert([payload]);
     setSaving(false);
-  }
+    if(error){ alert("Error: "+error.message); return; }
+    onSave?.(); onClose();
+  };
 
   return (
-    <Modal onClose={onClose} w={560}>
+    <Modal onClose={onClose} w={600}>
       <MHead title="Nuevo equipo" onClose={onClose}/>
-      <div style={{ padding:"18px 22px 22px", display:"flex", flexDirection:"column", gap:14 }}>
-        <Field label="Nombre del equipo *">
-          <input value={form.nombre} onChange={e=>upd("nombre",e.target.value)} style={inp()} placeholder="Ej: Caldera principal, Split salón..."/>
-        </Field>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-          <Field label="Marca"><input value={form.marca} onChange={e=>upd("marca",e.target.value)} style={inp()} placeholder="Baxi, Daikin, Samsung..."/></Field>
-          <Field label="Modelo"><input value={form.modelo} onChange={e=>upd("modelo",e.target.value)} style={inp()} placeholder="Duo-tec 24, Wind-Free..."/></Field>
-          <Field label="Nº de serie"><input value={form.numero_serie} onChange={e=>upd("numero_serie",e.target.value)} style={inp()} placeholder="Opcional"/></Field>
-          <Field label="Año instalación"><input type="number" value={form.año_instalacion} onChange={e=>upd("año_instalacion",e.target.value)} style={inp()} placeholder="2020"/></Field>
+      <div style={{padding: isMobile?"14px":"20px 24px", display:"flex",
+        flexDirection:"column", gap:14, maxHeight:"80vh", overflowY:"auto"}}>
+
+        {/* Tipo de equipo */}
+        <div>
+          <div style={{fontSize:11,color:T.muted,marginBottom:6,fontWeight:600}}>TIPO DE EQUIPO</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+            {TIPO_EQUIPO_OPTIONS.map(opt=>(
+              <button key={opt.value} onClick={()=>onTipoChange(opt.value)}
+                style={{padding:"7px 14px",borderRadius:20,fontSize:12,fontWeight:600,
+                  cursor:"pointer",border:`1.5px solid ${form.tipo===opt.value ? T.accent : T.border}`,
+                  background: form.tipo===opt.value ? T.accentLight : T.surface,
+                  color: form.tipo===opt.value ? T.accent : T.text}}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
-        <Field label="Dirección"><input value={form.direccion} onChange={e=>upd("direccion",e.target.value)} style={inp()} placeholder="Dónde está instalado"/></Field>
-        <Field label="Ubicación exacta"><input value={form.ubicacion} onChange={e=>upd("ubicacion",e.target.value)} style={inp()} placeholder="Ej: Cuarto de calderas, Terraza..."/></Field>
-        <Field label="Notas"><textarea value={form.notas} onChange={e=>upd("notas",e.target.value)} style={{...inp(),minHeight:60,resize:"vertical"}} placeholder="Observaciones adicionales..."/></Field>
-        <div style={{ display:"flex", justifyContent:"flex-end", gap:8 }}>
-          <Btn ch="Cancelar" onClick={onClose} v="g"/>
-          <Btn ch={saving?"Guardando...":"Añadir equipo"} onClick={save} disabled={saving||!form.nombre.trim()}/>
+
+        {/* Datos del equipo */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div style={{gridColumn:"1/-1"}}>
+            <div style={{fontSize:11,color:T.muted,marginBottom:4,fontWeight:600}}>NOMBRE *</div>
+            <input value={form.nombre} onChange={e=>upd("nombre",e.target.value)}
+              placeholder="Ej: Caldera sala principal" style={inp()}/>
+          </div>
+          {[
+            {k:"marca",l:"MARCA",pl:"Ej: Roca"},
+            {k:"modelo",l:"MODELO",pl:"Ej: Condens Gold"},
+            {k:"potencia",l:"POTENCIA (kW)",pl:"Ej: 24"},
+            {k:"numero_serie",l:"Nº SERIE",pl:"Ej: ABC123456"},
+            {k:"año_fabricacion",l:"AÑO FABRICACIÓN",pl:"Ej: 2018"},
+            {k:"ubicacion",l:"UBICACIÓN",pl:"Ej: Sala de calderas"},
+          ].map(f=>(
+            <div key={f.k}>
+              <div style={{fontSize:11,color:T.muted,marginBottom:4,fontWeight:600}}>{f.l}</div>
+              <input value={form[f.k]} onChange={e=>upd(f.k,e.target.value)}
+                placeholder={f.pl} style={inp()}/>
+            </div>
+          ))}
+          <div style={{gridColumn:"1/-1"}}>
+            <div style={{fontSize:11,color:T.muted,marginBottom:4,fontWeight:600}}>NOTAS TÉCNICAS</div>
+            <textarea value={form.notas} onChange={e=>upd("notas",e.target.value)}
+              placeholder="Observaciones técnicas..." style={{...inp(),minHeight:60}}/>
+          </div>
         </div>
+
+        {/* Periodicidad */}
+        <div>
+          <div style={{fontSize:11,color:T.muted,marginBottom:8,fontWeight:600}}>PERIODICIDAD DE REVISIÓN</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {["mensual","trimestral","semestral","anual"].map(tipo=>{
+              const mt = MT[tipo];
+              const activa = periodicidad[tipo];
+              return (
+                <div key={tipo} style={{borderRadius:10,overflow:"hidden",
+                  border:`1.5px solid ${activa ? mt.color+"60" : T.border}`}}>
+                  <div onClick={()=>setPeriodicidad(p=>({...p,[tipo]:!p[tipo]}))}
+                    style={{padding:"10px 14px",cursor:"pointer",
+                      display:"flex",justifyContent:"space-between",alignItems:"center",
+                      background: activa ? mt.color+"15" : T.surface}}>
+                    <span style={{fontSize:13,fontWeight:600,
+                      color: activa ? mt.color : T.text,textTransform:"capitalize"}}>{tipo}</span>
+                    <div style={{width:36,height:20,borderRadius:10,position:"relative",
+                      background: activa ? mt.color : T.border,transition:"all 0.2s"}}>
+                      <div style={{position:"absolute",top:2,
+                        left: activa ? 18 : 2,width:16,height:16,
+                        borderRadius:"50%",background:"#fff",transition:"all 0.2s"}}/>
+                    </div>
+                  </div>
+                  {activa && (
+                    <div style={{padding:"10px 14px",background:T.card,
+                      borderTop:`1px solid ${T.border}`}}>
+                      <div style={{fontSize:11,color:T.muted,marginBottom:4}}>Primera revisión</div>
+                      <input type="date" value={proximas[tipo]}
+                        onChange={e=>setProximas(p=>({...p,[tipo]:e.target.value}))}
+                        style={inp()}/>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Checklist */}
+        {checklist.length>0 && (
+          <div>
+            <div style={{fontSize:11,color:T.muted,marginBottom:8,fontWeight:600}}>
+              CHECKLIST DE REVISIÓN — marca los que aplican
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {checklist.map((item,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:8,
+                  padding:"8px 12px",borderRadius:8,
+                  background: item.activo ? T.accentLight : T.surface,
+                  border:`1px solid ${item.activo ? T.accent+"40" : T.border}`}}>
+                  <div onClick={()=>toggleItem(i)}
+                    style={{width:18,height:18,borderRadius:4,flexShrink:0,cursor:"pointer",
+                      border:`2px solid ${item.activo ? T.accent : T.border}`,
+                      background: item.activo ? T.accent : "none",
+                      display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    {item.activo && <svg width="10" height="10" viewBox="0 0 10 10">
+                      <polyline points="1,5 4,8 9,2" stroke="#fff" strokeWidth="2" fill="none"/>
+                    </svg>}
+                  </div>
+                  <span style={{flex:1,fontSize:12,color: item.activo ? T.text : T.muted}}>
+                    {item.texto}
+                  </span>
+                  <button onClick={()=>removeItem(i)}
+                    style={{background:"none",border:"none",color:T.muted,
+                      cursor:"pointer",fontSize:16,padding:"0 4px"}}>×</button>
+                </div>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:10}}>
+              <input value={nuevoItem} onChange={e=>setNuevoItem(e.target.value)}
+                onKeyDown={e=>e.key==="Enter"&&addItem()}
+                placeholder="Añadir ítem al checklist..."
+                style={{...inp(),flex:1,fontSize:12}}/>
+              <button onClick={addItem}
+                style={{padding:"0 14px",borderRadius:8,border:"none",
+                  background:T.accent,color:"#fff",cursor:"pointer",fontWeight:600}}>+</button>
+            </div>
+          </div>
+        )}
+
+        {form.tipo==="otro" && checklist.length===0 && (
+          <div>
+            <div style={{fontSize:11,color:T.muted,marginBottom:8,fontWeight:600}}>
+              CHECKLIST DE REVISIÓN
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <input value={nuevoItem} onChange={e=>setNuevoItem(e.target.value)}
+                onKeyDown={e=>e.key==="Enter"&&addItem()}
+                placeholder="Añadir ítem al checklist..."
+                style={{...inp(),flex:1,fontSize:12}}/>
+              <button onClick={addItem}
+                style={{padding:"0 14px",borderRadius:8,border:"none",
+                  background:T.accent,color:"#fff",cursor:"pointer",fontWeight:600}}>+</button>
+            </div>
+          </div>
+        )}
+
+        {/* Botón guardar */}
+        <button onClick={save} disabled={saving}
+          style={{padding:"12px",borderRadius:10,border:"none",
+            background: saving ? T.border : T.accent,
+            color:"#fff",cursor: saving?"not-allowed":"pointer",
+            fontSize:14,fontWeight:700,marginTop:4}}>
+          {saving ? "Guardando..." : "Guardar equipo"}
+        </button>
       </div>
     </Modal>
   );
@@ -5057,6 +5362,7 @@ function InstDetalle({ inst, data, refresh, onClose }) {
 /* ─── MANTENIMIENTO ──────────────────────────────────────────────────────── */
 function MantenimientoView({ data, user, refresh, empresa={} }) {
   const isMobile=useIsMobile(); const [tab,setTab]=useState("pendientes"); const [showInst,setShowInst]=useState(null); const [showRev,setShowRev]=useState(null); const [expanded,setExpanded]=useState(null); const [selInst,setSelInst]=useState(null);
+  const [showNuevoEq, setShowNuevoEq] = useState(null);
   const isAdmin=user.role==="admin"; const insts=data.instalaciones||[]; const revs=data.revisiones||[]; const cls=data.clientes||[]; const [revSel,setRevSel]=useState(null);
   const cl=id=>cls.find(c=>c.id===id);
   const eqs = (data.equipos||[]).filter(eq => eq.instalacion_id);
@@ -5129,18 +5435,94 @@ function MantenimientoView({ data, user, refresh, empresa={} }) {
             </div>
           </div>
           {exp&&<div style={{ borderTop:`1px solid ${T.border}` }}>
-            {cInsts.length===0?<div style={{ padding:"12px 16px",color:T.muted,fontSize:12 }}>Sin instalaciones.</div>:cInsts.map(inst=><div key={inst.id} style={{ padding:"12px 16px 12px 28px",borderBottom:`1px solid ${T.surface}`,display:"flex",alignItems:"flex-start",gap:12 }}>
-              <div style={{ flex:1 }}><div style={{ fontSize:13,fontWeight:600,color:T.text,marginBottom:6 }}>{inst.nombre}<span style={{ fontSize:11,color:T.muted,fontWeight:400,marginLeft:8 }}>{inst.tipo} · {inst.ubicacion}</span></div>
-                <div style={{ display:"flex",gap:7,flexWrap:"wrap" }}>{MT_TIPOS.map(tipo=>{ if(!inst["activa_"+tipo]) return null; const mt=MT[tipo]; const info=urgInfo(inst["proxima_"+tipo]||null); return <div key={tipo} style={{ display:"flex",alignItems:"center",gap:5,padding:"3px 10px",borderRadius:20,background:mt.color+"10",border:`1px solid ${mt.color}25` }}><span style={{ fontSize:11,fontWeight:600,color:mt.color }}>{mt.label}</span><span style={{ fontSize:10,color:UCOL[info.level] }}>{info.label}</span><button onClick={()=>setShowRev({inst,cliente:c,tipo})} style={{ background:mt.color,border:"none",borderRadius:4,color:"#fff",fontSize:9,padding:"1px 7px",cursor:"pointer",fontWeight:600 }}>Iniciar</button></div>; })}</div>
-              </div>
-              <button onClick={e=>{ e.stopPropagation(); setSelInst(inst); }}
-                style={{fontSize:11,padding:"4px 10px",borderRadius:6,
-                  border:`1px solid ${T.border}`,background:T.card,
-                  color:T.text,cursor:"pointer",marginRight:6}}>
-                Ver detalle
-              </button>
-              {isAdmin&&<Btn ch="Editar" onClick={()=>setShowInst({clienteId:c.id,inst})} v="g" sm/>}
-            </div>)}
+            {cInsts.map(inst => {
+              const eqsInst = (data.equipos||[]).filter(eq => eq.instalacion_id === inst.id);
+              return (
+                <div key={inst.id} style={{borderBottom:`1px solid ${T.border}`}}>
+                  {/* Cabecera del contrato */}
+                  <div style={{padding:"10px 16px 10px 28px",display:"flex",
+                    justifyContent:"space-between",alignItems:"center"}}>
+                    <div>
+                      <span style={{fontSize:13,fontWeight:700,color:T.text}}>{inst.nombre}</span>
+                      {inst.activo===false && (
+                        <span style={{fontSize:11,color:T.muted,marginLeft:8,
+                          padding:"1px 8px",borderRadius:20,background:T.surface,
+                          border:`1px solid ${T.border}`}}>Inactivo</span>
+                      )}
+                      <span style={{fontSize:11,color:T.muted,marginLeft:8}}>
+                        {eqsInst.length} equipo{eqsInst.length!==1?"s":""}
+                      </span>
+                    </div>
+                    <div style={{display:"flex",gap:6}}>
+                      <button onClick={()=>setShowInst({clienteId:c.id, inst})}
+                        style={{fontSize:11,padding:"4px 10px",borderRadius:6,
+                          border:`1px solid ${T.border}`,background:T.card,
+                          color:T.text,cursor:"pointer"}}>
+                        Editar
+                      </button>
+                      <button onClick={()=>setShowNuevoEq({ clienteId: c.id, instalacionId: inst.id })}
+                        style={{fontSize:11,padding:"4px 10px",borderRadius:6,
+                          border:"none",background:T.accent,
+                          color:"#fff",cursor:"pointer",fontWeight:600}}>
+                        + Equipo
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Lista de equipos */}
+                  {eqsInst.length===0 ? (
+                    <div style={{padding:"10px 28px 14px",fontSize:12,color:T.muted}}>
+                      Sin equipos registrados
+                    </div>
+                  ) : (
+                    <div style={{padding:"0 16px 12px 28px",display:"flex",flexDirection:"column",gap:6}}>
+                      {eqsInst.map(eq=>{
+                        const frecuencias = ["mensual","trimestral","semestral","anual"]
+                          .filter(t=>eq["activa_"+t]);
+                        const tipoLabel = TIPO_EQUIPO_OPTIONS.find(t=>t.value===eq.tipo)?.label||eq.tipo||"";
+                        return (
+                          <div key={eq.id} style={{background:T.surface,borderRadius:8,
+                            padding:"8px 12px",border:`1px solid ${T.border}`,
+                            display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontSize:13,fontWeight:600,color:T.text}}>{eq.nombre}</div>
+                              <div style={{fontSize:11,color:T.muted,marginTop:1}}>
+                                {[tipoLabel,eq.marca,eq.modelo].filter(Boolean).join(" · ")}
+                              </div>
+                              {frecuencias.length>0 && (
+                                <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
+                                  {frecuencias.map(t=>{
+                                    const mt = MT[t];
+                                    const info = urgInfo(eq["proxima_"+t]||null);
+                                    const uc = UCOL[info.level]||T.muted;
+                                    return (
+                                      <span key={t} style={{fontSize:10,padding:"2px 8px",borderRadius:20,
+                                        background:mt.color+"15",border:`1px solid ${mt.color}40`,
+                                        color:mt.color,fontWeight:600}}>
+                                        {mt.label}
+                                        {eq["proxima_"+t] && (
+                                          <span style={{color:uc,marginLeft:4}}>· {info.label}</span>
+                                        )}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                            <button onClick={()=>setShowRev({inst, eq, cliente:c, tipo: frecuencias[0]||"anual"})}
+                              style={{fontSize:11,padding:"4px 10px",borderRadius:6,
+                                border:`1px solid ${T.accent}40`,background:T.accentLight,
+                                color:T.accent,cursor:"pointer",fontWeight:600,marginLeft:8,flexShrink:0}}>
+                              Iniciar revisión
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>}
         </div>; })}
       </div>}
@@ -5148,10 +5530,18 @@ function MantenimientoView({ data, user, refresh, empresa={} }) {
         {revs.length===0&&<div style={{ textAlign:"center",padding:"60px",color:T.muted,fontSize:13 }}>Sin revisiones completadas.</div>}
         {[...revs].sort((a,b)=>(b.created_at||"").localeCompare(a.created_at||"")).map(rev=>{ const mt=MT[rev.tipo]||{label:rev.tipo,color:T.muted}; const total=Object.keys(rev.checks||{}).length; const done=Object.values(rev.checks||{}).filter(Boolean).length; return <div key={rev.id} style={{ background:T.card,border:`1px solid ${T.border}`,borderRadius:11,padding:"13px 15px",display:"flex",alignItems:"center",gap:14 }}><div style={{ flex:1,minWidth:0 }}><div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:4 }}><span style={{ fontSize:13,fontWeight:600,color:T.text }}>{rev.instalacion_nombre}</span><span style={{ fontSize:9,padding:"1px 8px",borderRadius:20,background:mt.color+"12",border:`1px solid ${mt.color}25`,color:mt.color,fontWeight:700 }}>{mt.label}</span><span style={{ fontSize:10,color:T.muted }}>Parte #{rev.num_parte}</span></div><div style={{ fontSize:12,color:T.muted }}>{rev.cliente_nombre} · {rev.fecha} · {rev.tecnico_nombre} · {done}/{total} ítems</div></div>{rev.firma_url&&<span style={{ fontSize:11,color:T.green,fontWeight:600 }}>Firmado</span>}<Btn ch="Ver detalle" onClick={()=>setRevSel(rev)} v="g" sm/></div>; })}
       </div>}
-      {showInst&&<InstModal clienteId={showInst.clienteId} inst={showInst.inst} refresh={refresh} onDel={delInst} onClose={()=>setShowInst(null)} clientes={cls}/>}
+      {showInst&&<InstModal initClienteId={showInst.clienteId} inst={showInst.inst} data={data} refresh={refresh} clientes={cls} onClose={()=>setShowInst(null)}/>}
       {showRev&&<RevisionModal inst={showRev.inst} eq={showRev.eq} cliente={showRev.cliente} tipo={showRev.tipo} user={user} onSave={saveRev} onClose={()=>setShowRev(null)}/>}
       {revSel&&<RevisionDetalle rev={revSel} insts={insts} cls={cls} empresa={empresa} onClose={()=>setRevSel(null)}/>}
       {selInst&&<InstDetalle inst={selInst} data={data} refresh={()=>{ refresh?.(); setSelInst(null); }} onClose={()=>setSelInst(null)}/>}
+      {showNuevoEq && (
+        <NuevoEquipoModal
+          clienteId={showNuevoEq.clienteId}
+          instalacionId={showNuevoEq.instalacionId}
+          onSave={()=>{ refresh?.(); setShowNuevoEq(null); }}
+          onClose={()=>setShowNuevoEq(null)}
+        />
+      )}
     </div>
   );
 }
@@ -5272,57 +5662,187 @@ function RevisionDetalle({ rev, insts, cls, empresa={}, onClose }) {
   </Modal>);
 }
 
-function InstModal({ clienteId:initClienteId, inst, refresh, onDel, onClose, clientes=[] }) {
+function InstModal({ initClienteId, inst, clientes, data, refresh, onClose }) {
   const isMobile = useIsMobile();
   const isEdit = !!inst;
-  const [clienteId, setClienteId] = useState(initClienteId||clientes[0]?.id||"");
-  const [form, setForm] = useState(inst ? {
-    _isEdit: true,
-    id: inst.id,
-    nombre: inst.nombre||"",
-    notas: inst.notas||"",
-    activo: inst.activo!==false,
-  } : {
-    nombre: "",
-    notas: "",
-    activo: true,
+  const [clienteId, setClienteId] = useState(initClienteId || inst?.cliente_id || null);
+  const [form, setForm] = useState({
+    nombre: inst?.nombre || "",
+    notas: inst?.notas || "",
+    activo: inst?.activo !== false,
   });
+  const [equipos, setEquipos] = useState([]);
+  const [showAddEquipo, setShowAddEquipo] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedInstId, setSavedInstId] = useState(inst?.id || null);
+
   const upd = (k,v) => setForm(p=>({...p,[k]:v}));
-  const saveInst = async () => {
+
+  const saveContrato = async () => {
     if(!clienteId){ alert("Selecciona un cliente"); return; }
     if(!form.nombre.trim()){ alert("El nombre del contrato es obligatorio"); return; }
+    setSaving(true);
     const clean = { nombre: form.nombre, notas: form.notas||null, activo: form.activo };
-    if(form._isEdit){
-      await supabase.from("instalaciones").update(clean).eq("id", form.id);
+    if(isEdit){
+      await supabase.from("instalaciones").update(clean).eq("id", inst.id);
+      setSaving(false);
+      refresh?.(); onClose();
     } else {
-      await supabase.from("instalaciones").insert([{ ...clean, cliente_id: clienteId }]);
+      const { data: newInst, error } = await supabase.from("instalaciones")
+        .insert([{ ...clean, cliente_id: clienteId }]).select().single();
+      setSaving(false);
+      if(error){ alert("Error: "+error.message); return; }
+      setSavedInstId(newInst.id);
+      refresh?.();
     }
+  };
+
+  const eliminar = async () => {
+    if(!window.confirm("¿Eliminar este contrato?")) return;
+    await supabase.from("equipos").update({ instalacion_id: null }).eq("instalacion_id", inst.id);
+    await supabase.from("revisiones").delete().eq("instalacion_id", inst.id);
+    await supabase.from("instalaciones").delete().eq("id", inst.id);
     refresh?.(); onClose();
   };
+
   return (
-    <Modal onClose={onClose} w={500} zIndex={300}>
-      <MHead title={isEdit?"Editar contrato":"Nuevo contrato"} onClose={onClose}/>
-      <div style={{ padding:isMobile?"16px 14px":"18px 22px", display:"flex", flexDirection:"column", gap:14 }}>
-        <ClienteSelector clientes={clientes} value={clienteId} onChange={setClienteId} onNewCliente={async(f)=>{ const {data:nc,error}=await supabase.from("clientes").insert([f]).select().single(); if(!error&&nc) setClienteId(nc.id); else alert("Error: "+(error?.message||"")); }}/>
-        <Field label="Nombre del contrato *">
-          <input value={form.nombre} onChange={e=>upd("nombre",e.target.value)} style={inp()} placeholder="Contrato mantenimiento anual..."/>
-        </Field>
-        <Field label="Notas">
-          <textarea value={form.notas} onChange={e=>upd("notas",e.target.value)} style={{...inp(), minHeight:80, resize:"vertical"}} placeholder="Observaciones, condiciones especiales..."/>
-        </Field>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", background:T.surface, borderRadius:8, border:`1px solid ${T.border}` }}>
-          <span style={{ fontSize:13, fontWeight:600, color:T.text }}>Contrato activo</span>
-          <button onClick={()=>upd("activo",!form.activo)} style={{ width:44, height:24, borderRadius:12, border:"none", background:form.activo?T.accent:T.border, cursor:"pointer", position:"relative", transition:"background 0.2s" }}>
-            <span style={{ position:"absolute", top:2, left:form.activo?22:2, width:20, height:20, borderRadius:10, background:"#fff", transition:"left 0.2s", display:"block" }}/>
+    <Modal onClose={onClose} w={620}>
+      <MHead title={isEdit ? "Editar contrato" : "Nuevo contrato"} onClose={onClose}/>
+      <div style={{padding: isMobile?"14px":"20px 24px", display:"flex",
+        flexDirection:"column", gap:14, maxHeight:"85vh", overflowY:"auto"}}>
+
+        {/* Cliente */}
+        <ClienteSelector clientes={clientes} value={clienteId} onChange={setClienteId}
+          onNewCliente={async(f)=>{
+            const {data:nc,error} = await supabase.from("clientes").insert([f]).select().single();
+            if(!error&&nc) setClienteId(nc.id);
+            else alert("Error: "+(error?.message||""));
+          }}/>
+
+        {/* Nombre y notas */}
+        <div>
+          <div style={{fontSize:11,color:T.muted,marginBottom:4,fontWeight:600}}>NOMBRE DEL CONTRATO *</div>
+          <input value={form.nombre} onChange={e=>upd("nombre",e.target.value)}
+            placeholder="Ej: Mantenimiento anual calderas..." style={inp()}/>
+        </div>
+        <div>
+          <div style={{fontSize:11,color:T.muted,marginBottom:4,fontWeight:600}}>NOTAS</div>
+          <textarea value={form.notas} onChange={e=>upd("notas",e.target.value)}
+            placeholder="Observaciones, condiciones especiales..."
+            style={{...inp(), minHeight:60}}/>
+        </div>
+
+        {/* Toggle activo */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+          padding:"12px 14px",background:T.surface,borderRadius:10,border:`1px solid ${T.border}`}}>
+          <span style={{fontSize:13,fontWeight:600,color:T.text}}>Contrato activo</span>
+          <button onClick={()=>upd("activo",!form.activo)}
+            style={{width:44,height:24,borderRadius:12,position:"relative",border:"none",
+              background: form.activo ? T.accent : T.border,cursor:"pointer",transition:"all 0.2s"}}>
+            <div style={{position:"absolute",top:2,
+              left: form.activo ? 22 : 2,width:20,height:20,
+              borderRadius:"50%",background:"#fff",transition:"all 0.2s"}}/>
           </button>
         </div>
-        <div style={{ display:"flex", justifyContent:"space-between" }}>
-          {isEdit ? <Btn ch="Eliminar" onClick={()=>onDel(form.id)} v="d" sm/> : <div/>}
-          <div style={{ display:"flex", gap:8 }}>
-            <Btn ch="Cancelar" onClick={onClose} v="g"/>
-            <Btn ch={isEdit?"Guardar cambios":"Crear contrato"} onClick={saveInst} disabled={!form.nombre.trim()||!clienteId}/>
+
+        {/* Botón guardar contrato */}
+        {!savedInstId && (
+          <button onClick={saveContrato} disabled={saving}
+            style={{padding:"11px",borderRadius:10,border:"none",
+              background: saving ? T.border : T.accent,
+              color:"#fff",cursor:saving?"not-allowed":"pointer",
+              fontSize:14,fontWeight:700}}>
+            {saving ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear contrato"}
+          </button>
+        )}
+
+        {/* Sección equipos — aparece tras crear el contrato o en edición */}
+        {(savedInstId) && (
+          <div style={{borderTop:`1px solid ${T.border}`,paddingTop:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <div style={{fontSize:11,fontWeight:700,color:T.muted,letterSpacing:1}}>
+                EQUIPOS ({equipos.length})
+              </div>
+              <button onClick={()=>setShowAddEquipo(true)}
+                style={{padding:"7px 14px",borderRadius:8,border:"none",
+                  background:T.accent,color:"#fff",cursor:"pointer",
+                  fontSize:12,fontWeight:600}}>
+                + Añadir equipo
+              </button>
+            </div>
+
+            {equipos.length===0 && !showAddEquipo && (
+              <div onClick={()=>setShowAddEquipo(true)}
+                style={{textAlign:"center",padding:"24px",color:T.muted,fontSize:13,
+                  background:T.surface,borderRadius:10,
+                  border:`2px dashed ${T.border}`,cursor:"pointer"}}>
+                Sin equipos. Pulsa para añadir el primero.
+              </div>
+            )}
+
+            {equipos.map((eq,i)=>(
+              <div key={i} style={{background:T.surface,borderRadius:10,padding:"10px 14px",
+                border:`1px solid ${T.border}`,marginBottom:8,
+                display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontWeight:600,fontSize:13,color:T.text}}>{eq.nombre}</div>
+                  <div style={{fontSize:11,color:T.muted,marginTop:2}}>
+                    {[TIPO_EQUIPO_OPTIONS.find(t=>t.value===eq.tipo)?.label,
+                      eq.marca, eq.modelo].filter(Boolean).join(" · ")}
+                  </div>
+                  <div style={{fontSize:11,color:T.accent,marginTop:2}}>
+                    {["mensual","trimestral","semestral","anual"]
+                      .filter(t=>eq["activa_"+t])
+                      .map(t=>MT[t]?.label||t).join(" · ")}
+                  </div>
+                </div>
+                <button onClick={()=>setEquipos(p=>p.filter((_,j)=>j!==i))}
+                  style={{background:"none",border:"none",color:T.red,
+                    cursor:"pointer",fontSize:18,padding:"0 4px"}}>×</button>
+              </div>
+            ))}
+
+            {showAddEquipo && (
+              <NuevoEquipoModal
+                clienteId={clienteId}
+                instalacionId={savedInstId}
+                onSave={()=>{
+                  refresh?.();
+                  setShowAddEquipo(false);
+                  // Recarga equipos de esta instalación
+                  supabase.from("equipos")
+                    .select("*")
+                    .eq("instalacion_id", savedInstId)
+                    .then(({data:eqs})=>setEquipos(eqs||[]));
+                }}
+                onClose={()=>setShowAddEquipo(false)}
+              />
+            )}
+
+            <button onClick={onClose}
+              style={{width:"100%",padding:"11px",borderRadius:10,marginTop:8,
+                border:`1px solid ${T.border}`,background:T.surface,
+                color:T.text,cursor:"pointer",fontSize:13,fontWeight:600}}>
+              Cerrar
+            </button>
           </div>
-        </div>
+        )}
+
+        {/* Botones edición */}
+        {isEdit && !savedInstId && (
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={eliminar}
+              style={{padding:"10px 16px",borderRadius:8,border:`1px solid ${T.red}40`,
+                background:T.redLight,color:T.red,cursor:"pointer",fontSize:13,fontWeight:600}}>
+              Eliminar
+            </button>
+            <button onClick={onClose}
+              style={{flex:1,padding:"10px",borderRadius:8,border:`1px solid ${T.border}`,
+                background:T.surface,color:T.text,cursor:"pointer",fontSize:13}}>
+              Cancelar
+            </button>
+          </div>
+        )}
       </div>
     </Modal>
   );
