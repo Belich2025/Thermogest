@@ -14,9 +14,10 @@ async function sendPushNotification(profiles, title, body, role) {
   const tokens = targets.map(p=>p.fcm_token);
   console.log("Enviando notificación a:", tokens);
   console.log("Título:", title, "Cuerpo:", body);
-  await Promise.all(targets.map(p=>
-    supabase.functions.invoke("send-notification",{ body:{ token:p.fcm_token, title, body } })
-      .catch(e=>console.error("FCM push error:",e))
+  const tokensUnicos = [...new Set(targets.map(p=>p.fcm_token))];
+  await Promise.all(tokensUnicos.map(token=>
+    supabase.functions.invoke("send-notification", { body:{ token, title, body } })
+      .catch(e=>console.error("FCM push error:", e))
   ));
 }
 
@@ -2041,8 +2042,7 @@ function NuevoAvisoModal({ data, user, techs, refresh, onClose }) {
     if (!error) {
       const clNombre = (data.clientes||[]).find(c=>c.id===form.clienteId)?.nombre || "cliente";
       console.log("DATA PROFILES AL GUARDAR:", data?.profiles?.length, data?.profiles?.map(p=>({nombre:p.nombre, role:p.role, fcm_token:p.fcm_token?.slice(0,20)})));
-      sendPushNotification(data.profiles, "Nuevo aviso - " + clNombre, form.descripcion?.slice(0,100) || "Sin descripción", "admin");
-      sendPushNotification(data.profiles, "Nuevo aviso - " + clNombre, form.descripcion?.slice(0,100) || "Sin descripción", "tecnico");
+      sendPushNotification(data.profiles, "Nuevo aviso - " + clNombre, form.descripcion?.slice(0,100) || "Sin descripción", null);
       refresh?.(); onClose();
     } else alert("Error: " + error.message);
     setSaving(false);
