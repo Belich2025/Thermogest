@@ -6139,12 +6139,47 @@ async function generarPartePDF(parte, averia, cliente, empresa={}, titulo="PARTE
 
     // ── 1. CABECERA EMPRESA ──
     doc.setFillColor(...O); doc.rect(0,0,210,36,"F");
-    doc.setTextColor(...W); doc.setFontSize(14); doc.setFont("helvetica","bold");
-    doc.text(empresa.nombre||"BLCH",12,13);
-    doc.setFontSize(8); doc.setFont("helvetica","normal");
-    if(empresa.cif)      doc.text("CIF: "+empresa.cif,12,20);
-    if(empresa.telefono) doc.text("Tel: "+empresa.telefono+(empresa.email?" · "+empresa.email:""),12,27);
-    if(empresa.direccion)doc.text(empresa.direccion,12,33);
+    if(empresa.logo_url) {
+      try {
+        const logoImg = await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = empresa.logo_url;
+        });
+        const canvas = document.createElement("canvas");
+        canvas.width = logoImg.naturalWidth;
+        canvas.height = logoImg.naturalHeight;
+        canvas.getContext("2d").drawImage(logoImg, 0, 0);
+        const logoData = canvas.toDataURL("image/png");
+        const maxW = 22, maxH = 16;
+        const ratio = Math.min(maxW/logoImg.naturalWidth*3.7795, maxH/logoImg.naturalHeight*3.7795);
+        const lw = (logoImg.naturalWidth * ratio)/3.7795;
+        const lh = (logoImg.naturalHeight * ratio)/3.7795;
+        doc.addImage(logoData, "PNG", 12, 6, lw, lh);
+        doc.setTextColor(...W); doc.setFontSize(8); doc.setFont("helvetica","bold");
+        doc.text(empresa.nombre||"BLCH", 12, 6+lh+4);
+        doc.setFontSize(7); doc.setFont("helvetica","normal");
+        if(empresa.cif)      doc.text("CIF: "+empresa.cif,12,6+lh+9);
+        if(empresa.telefono) doc.text("Tel: "+empresa.telefono+(empresa.email?" · "+empresa.email:""),12,6+lh+14);
+        if(empresa.direccion)doc.text(empresa.direccion,12,6+lh+19);
+      } catch(e) {
+        doc.setTextColor(...W); doc.setFontSize(14); doc.setFont("helvetica","bold");
+        doc.text(empresa.nombre||"BLCH", 12, 13);
+        doc.setFontSize(8); doc.setFont("helvetica","normal");
+        if(empresa.cif)      doc.text("CIF: "+empresa.cif,12,20);
+        if(empresa.telefono) doc.text("Tel: "+empresa.telefono+(empresa.email?" · "+empresa.email:""),12,27);
+        if(empresa.direccion)doc.text(empresa.direccion,12,33);
+      }
+    } else {
+      doc.setTextColor(...W); doc.setFontSize(14); doc.setFont("helvetica","bold");
+      doc.text(empresa.nombre||"BLCH", 12, 13);
+      doc.setFontSize(8); doc.setFont("helvetica","normal");
+      if(empresa.cif)      doc.text("CIF: "+empresa.cif,12,20);
+      if(empresa.telefono) doc.text("Tel: "+empresa.telefono+(empresa.email?" · "+empresa.email:""),12,27);
+      if(empresa.direccion)doc.text(empresa.direccion,12,33);
+    }
     doc.setFontSize(12); doc.setFont("helvetica","bold");
     doc.text(titulo,198,12,{align:"right"});
     doc.setFontSize(8); doc.setFont("helvetica","normal");
@@ -6154,18 +6189,22 @@ async function generarPartePDF(parte, averia, cliente, empresa={}, titulo="PARTE
 
     // ── 2. CLIENTE + AVERÍA ──
     let y=42;
-    doc.setFillColor(...L); doc.rect(10,y,190,20,"F");
+    const extraClienteLines=(cliente?.dni?1:0)+(cliente?.email?1:0)+(cliente?.direccion?1:0);
+    const clienteBoxH=20+extraClienteLines*5;
+    doc.setFillColor(...L); doc.rect(10,y,190,clienteBoxH,"F");
     doc.setTextColor(...D); doc.setFontSize(8); doc.setFont("helvetica","bold");
     doc.text("CLIENTE",14,y+6); doc.text("EQUIPO / AVERÍA",105,y+6);
     doc.setFont("helvetica","normal"); doc.setFontSize(10);
-    doc.text(cliente?.nombre||"—",14,y+13);
+    doc.text(cliente?.nombre?(cliente.nombre+(cliente.apellidos?" "+cliente.apellidos:"")):"—",14,y+13);
     doc.setFontSize(8); doc.setTextColor(...G);
-    if(cliente?.telefono) doc.text(cliente.telefono,14,y+18);
+    let cy=y+13;
+    if(cliente?.telefono){ cy+=5; doc.text(cliente.telefono,14,cy); }
+    if(cliente?.dni){ cy+=5; doc.text("DNI/NIF: "+cliente.dni,14,cy); }
+    if(cliente?.email){ cy+=5; doc.text(cliente.email,14,cy); }
+    if(cliente?.direccion){ cy+=5; doc.text(cliente.direccion.slice(0,45),14,cy); }
     doc.setFontSize(9); doc.setTextColor(...D);
     doc.text((averia.equipo||"—").slice(0,35),105,y+13);
-    doc.setFontSize(8); doc.setTextColor(...G);
-    if(averia.direccion) doc.text(averia.direccion.slice(0,40),105,y+18);
-    y+=26;
+    y+=clienteBoxH+6;
 
     // ── 3. DESCRIPCIÓN DEL TRABAJO ──
     if(parte.trabajo) {
@@ -6261,6 +6300,10 @@ async function generarPartePDF(parte, averia, cliente, empresa={}, titulo="PARTE
 
     // ── PIE ──
     const ph2=doc.internal.pageSize.height;
+    doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(102,102,102);
+    const legalText="En cumplimiento de la Ley Orgánica 3/2018 de Protección de Datos Personales (LOPDGDD) y el Reglamento (UE) 2016/679 (RGPD), le informamos que sus datos serán tratados por "+(empresa.nombre||"")+" con la finalidad de gestionar los servicios contratados. Puede ejercer sus derechos de acceso, rectificación, supresión y portabilidad dirigiéndose a "+(empresa.email||"")+".";
+    const legalLines=doc.splitTextToSize(legalText,182);
+    doc.text(legalLines,14,ph2-22);
     doc.setFillColor(...D); doc.rect(0,ph2-10,210,10,"F");
     doc.setTextColor(100,116,139); doc.setFontSize(7); doc.setFont("helvetica","normal");
     doc.text((empresa.nombre||"")+(empresa.cif?" · CIF:"+empresa.cif:""),14,ph2-4);
