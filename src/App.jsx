@@ -54,6 +54,7 @@ const T_DARK = {
   input:"#1a1a1a",
 };
 let T = T_LIGHT;
+let _setTooltip = ()=>{};
 const SunIcon  = ()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="6.34" y1="17.66" x2="4.93" y2="19.07"/><line x1="19.07" y1="4.93" x2="17.66" y2="6.34"/></svg>;
 const MoonIcon = ()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>;
 const AIBtn = ({ch,onClick,disabled})=>(
@@ -299,6 +300,33 @@ function Sidebar({ user, view, setView, onLogout, data, open, onToggle, onClose,
   );
 }
 
+function TooltipOnboarding({ id, titulo, descripcion, onClose }) {
+  return (
+    <div style={{
+      position:"fixed", bottom: 80, right: 24, zIndex:1200,
+      background:T.accent, color:"#fff", borderRadius:14,
+      padding:"16px 20px", maxWidth:320, boxShadow:"0 8px 32px rgba(0,0,0,0.18)",
+      animation:"slideUp 0.3s ease"
+    }}>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12}}>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:700, fontSize:14, marginBottom:6}}>{titulo}</div>
+          <div style={{fontSize:12, opacity:0.9, lineHeight:1.5}}>{descripcion}</div>
+        </div>
+        <button onClick={onClose}
+          style={{background:"none", border:"none", color:"#fff", cursor:"pointer",
+            fontSize:18, opacity:0.8, padding:0, flexShrink:0}}>✕</button>
+      </div>
+      <button onClick={onClose}
+        style={{marginTop:12, padding:"6px 16px", borderRadius:8,
+          background:"rgba(255,255,255,0.2)", border:"1px solid rgba(255,255,255,0.3)",
+          color:"#fff", cursor:"pointer", fontSize:12, fontWeight:600, width:"100%"}}>
+        Entendido
+      </button>
+    </div>
+  );
+}
+
 /* ─── DASHBOARD ──────────────────────────────────────────────────────────── */
 function Dashboard({ data, setView, techs }) {
   const isMobile = useIsMobile();
@@ -360,6 +388,83 @@ function Dashboard({ data, setView, techs }) {
         <p style={{ color:T.muted,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",margin:"0 0 4px" }}>Panel de control</p>
         <h1 style={{ fontSize:isMobile?20:26,fontWeight:800,color:T.text,margin:0,fontFamily:"'Sora',sans-serif" }}>Dashboard</h1>
       </div>
+
+      {(()=>{
+  const pasos = [
+    { id:"cliente",    label:"Añade tu primer cliente",              done: (data.clientes||[]).length > 0,           action: ()=>setView("clientes") },
+    { id:"aviso",      label:"Crea tu primer aviso",                 done: (data.averias||[]).length > 0,            action: ()=>setView("avisos") },
+    { id:"presupuesto",label:"Genera tu primer presupuesto",         done: (data.presupuestos||[]).length > 0,       action: ()=>setView("presupuestos") },
+    { id:"tecnico",    label:"Añade un técnico a tu equipo",         done: (data.profiles||[]).filter(p=>p.role==="tecnico").length > 0, action: ()=>setView("personal") },
+    { id:"contrato",   label:"Crea tu primer contrato de mantenimiento", done: (data.instalaciones||[]).length > 0, action: ()=>setView("contratos") },
+  ];
+  const completados = pasos.filter(p=>p.done).length;
+  const total = pasos.length;
+  const todoHecho = completados === total;
+  const oculto = localStorage.getItem("blch-onboarding-oculto");
+  if(todoHecho || oculto) return null;
+  return (
+    <div style={{background:T.card, borderRadius:14, padding:"20px 24px",
+      border:`1px solid ${T.border}`, marginBottom:4}}>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16}}>
+        <div>
+          <div style={{fontSize:15, fontWeight:700, color:T.text, marginBottom:4}}>
+            Primeros pasos — {completados}/{total} completados
+          </div>
+          <div style={{fontSize:12, color:T.muted}}>
+            Completa estos pasos para sacar el máximo partido a BLCH
+          </div>
+        </div>
+        <button onClick={()=>{ localStorage.setItem("blch-onboarding-oculto","1"); window.location.reload(); }}
+          style={{background:"none", border:"none", color:T.muted, cursor:"pointer", fontSize:13}}>
+          Ocultar
+        </button>
+      </div>
+
+      {/* Barra de progreso */}
+      <div style={{height:6, background:T.surface, borderRadius:3, marginBottom:16, overflow:"hidden"}}>
+        <div style={{height:"100%", width:`${(completados/total)*100}%`,
+          background: completados===total ? T.green : T.accent,
+          borderRadius:3, transition:"width 0.4s ease"}}/>
+      </div>
+
+      {/* Lista de pasos */}
+      <div style={{display:"flex", flexDirection:"column", gap:8}}>
+        {pasos.map(p=>(
+          <div key={p.id} onClick={!p.done ? p.action : undefined}
+            style={{display:"flex", alignItems:"center", gap:12, padding:"10px 14px",
+              borderRadius:10, cursor: p.done ? "default" : "pointer",
+              background: p.done ? T.surface : T.card,
+              border:`1px solid ${p.done ? T.border : T.accent+"44"}`,
+              transition:"all 0.15s",
+              opacity: p.done ? 0.7 : 1}}
+            onMouseEnter={e=>{ if(!p.done) e.currentTarget.style.background=T.accentLight; }}
+            onMouseLeave={e=>{ if(!p.done) e.currentTarget.style.background=T.card; }}>
+            <div style={{width:22, height:22, borderRadius:"50%", flexShrink:0,
+              background: p.done ? T.green : T.surface,
+              border:`2px solid ${p.done ? T.green : T.border}`,
+              display:"flex", alignItems:"center", justifyContent:"center"}}>
+              {p.done && (
+                <svg width="11" height="11" viewBox="0 0 11 11">
+                  <polyline points="1,6 4,9 10,2" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round"/>
+                </svg>
+              )}
+            </div>
+            <span style={{fontSize:13, color: p.done ? T.muted : T.text, fontWeight: p.done ? 400 : 500,
+              textDecoration: p.done ? "line-through" : "none"}}>
+              {p.label}
+            </span>
+            {!p.done && (
+              <svg style={{marginLeft:"auto"}} width="14" height="14" viewBox="0 0 24 24"
+                fill="none" stroke={T.accent} strokeWidth="2">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+})()}
 
       {/* ── KPIs ── */}
       <div style={{ display:"flex",flexWrap:"wrap",gap:12 }}>
@@ -1861,7 +1966,7 @@ function ProgramarVisitaModal({ averia, cliente, data }) {
     setSaving(true);
     const { error } = await supabase.from("eventos").insert([{
       tipo:"averia_programada",
-      titulo:`Avería: ${averia.descripcion?.slice(0,50)}`,
+      titulo:`${String(averia.id).startsWith("mant_")?"Mantenimiento":"Avería"}: ${averia.descripcion?.slice(0,50)}`,
       cliente_id:averia.cliente_id,
       direccion:averia.direccion||cliente?.direccion||"",
       fecha:fecha,
@@ -2355,10 +2460,11 @@ function AvisosView({ data, user, techs, refresh, empresa, onSelect, onSelectMan
     <div style={{ padding:isMobile?12:28 }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
         <h1 style={{ fontSize:isMobile?20:24, fontWeight:700, color:T.text, margin:0, fontFamily:"'Sora',sans-serif" }}>Avisos</h1>
+        <button onClick={()=>_setTooltip("avisos")} title="Ayuda de Avisos" style={{ width:32,height:32,borderRadius:"50%",background:T.surface,border:`1.5px solid ${T.border}`,color:T.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,marginRight:8 }}>?</button>
         <Btn ch={isMobile?"+ Nuevo":"+ Nuevo aviso"} onClick={()=>setShowNew(true)}/>
       </div>
 
-      <div style={{ width:"fit-content" }}>
+      <div style={{ width: isMobile ? "100%" : "fit-content" }}>
       {/* Pestañas */}
       <div style={{ display:"flex", gap:10, marginBottom:14, width:"100%" }}>
         {[
@@ -3259,6 +3365,7 @@ function PresupuestosList({ data, refresh, user, onSelect, empresa={} }) {
     <div style={{ padding:isMobile?12:28 }}>
       <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16 }}>
         <div><h1 style={{ fontSize:isMobile?20:24,fontWeight:700,color:T.text,margin:"0 0 3px",fontFamily:"'Sora',sans-serif" }}>Presupuestos</h1><p style={{ color:T.muted,fontSize:12,margin:0 }}>{sorted.length} · <span style={{ color:T.accent,fontWeight:600 }}>{total.toLocaleString("es-ES")} €</span></p></div>
+        <button onClick={()=>_setTooltip("presupuestos")} title="Ayuda de Presupuestos" style={{ width:32,height:32,borderRadius:"50%",background:T.surface,border:`1.5px solid ${T.border}`,color:T.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,marginRight:8 }}>?</button>
         <Btn ch={isMobile?"+ Nuevo":"+ Nuevo presupuesto"} onClick={()=>setShowNew(true)}/>
       </div>
       <div style={{ display:"flex",gap:6,marginBottom:14,overflowX:"auto",paddingBottom:4 }}>
@@ -3757,6 +3864,7 @@ function ClientesList({ data, refresh, user }) {
         <div style={{ display:"flex",gap:8 }}>
           {user?.role==="admin"&&<Btn ch="Borrar todos" onClick={borrarTodos} v="d"/>}
           <Btn ch="Importar Excel" onClick={()=>setShowImport(true)} v="g"/>
+          <button onClick={()=>_setTooltip("clientes")} title="Ayuda de Clientes" style={{ width:32,height:32,borderRadius:"50%",background:T.surface,border:`1.5px solid ${T.border}`,color:T.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,marginRight:8 }}>?</button>
           <Btn ch="+ Nuevo cliente" onClick={()=>setShowNew(true)}/>
         </div>
       </div>
@@ -5182,7 +5290,7 @@ function CalendarView({ data, user, refresh }) {
           {/* ══ VISTA SEMANAL ══ */}
           {viewMode==="week"&&(
             <div style={{ overflowX:"auto" }}>
-              <div style={{ display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,minWidth:480 }}>
+              <div style={{ display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2 }}>
                 {weekDays.map((d,i)=>{
                   const ds = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
                   const isToday = ds===todayDS;
@@ -5541,6 +5649,7 @@ function MantenimientoView({ data, user, refresh, empresa={} }) {
     <div style={{ padding:isMobile?12:28 }}>
       <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20 }}>
         <div><h1 style={{ fontSize:isMobile?20:24,fontWeight:700,color:T.text,margin:"0 0 3px",fontFamily:"'Sora',sans-serif" }}>Contratos</h1><p style={{ color:T.muted,fontSize:12,margin:0 }}>Contratos periódicos · Revisiones</p></div>
+        <button onClick={()=>_setTooltip("contratos")} title="Ayuda de Contratos" style={{ width:32,height:32,borderRadius:"50%",background:T.surface,border:`1.5px solid ${T.border}`,color:T.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,marginRight:8 }}>?</button>
         {isAdmin&&<Btn ch="+ Nuevo contrato" onClick={()=>setShowInst({clienteId:cls[0]?.id})}/>}
       </div>
       <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:10,marginBottom:20 }}>
@@ -7205,6 +7314,7 @@ function InstalacionesObrasView({ data, user, techs, refresh, empresa }) {
     <div style={{ padding:isMobile?12:28 }}>
       <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16 }}>
         <h1 style={{ fontSize:isMobile?20:24,fontWeight:700,color:T.text,margin:0,fontFamily:"'Sora',sans-serif" }}>Instalaciones</h1>
+        <button onClick={()=>_setTooltip("instalaciones_obras")} title="Ayuda de Instalaciones" style={{ width:32,height:32,borderRadius:"50%",background:T.surface,border:`1.5px solid ${T.border}`,color:T.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,marginRight:8 }}>?</button>
         <Btn ch="+ Nueva instalación" onClick={()=>setShowNew(true)}/>
       </div>
 
@@ -8065,6 +8175,7 @@ function UsuariosView({ techs, refresh, user }) {
           <h1 style={{ fontSize:isMobile?20:24,fontWeight:700,color:T.text,margin:"0 0 4px",fontFamily:"'Sora',sans-serif" }}>Usuarios</h1>
           <p style={{ color:T.muted,fontSize:13,margin:0 }}>{techs.length} usuarios · {admins.length} admins · {tecnicos.length} técnicos</p>
         </div>
+        <button onClick={()=>_setTooltip("personal")} title="Ayuda de Personal" style={{ width:32,height:32,borderRadius:"50%",background:T.surface,border:`1.5px solid ${T.border}`,color:T.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,marginRight:8 }}>?</button>
         <Btn ch="+ Nuevo usuario" onClick={()=>setShowNew(true)}/>
       </div>
 
@@ -8140,6 +8251,8 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const searchVoiceRef = useRef(false);
   const [searchVoiceActive, setSearchVoiceActive] = useState(false);
+  const [tooltipActivo, setTooltipActivo] = useState(null);
+  _setTooltip = setTooltipActivo;
   T = darkMode ? T_DARK : T_LIGHT;
   let SC = darkMode ? SC_DARK : SC_LIGHT;
   BS = mkBS(SC);
@@ -8181,6 +8294,10 @@ export default function App() {
 
   useEffect(()=>{ document.body.style.background = T.bg; }, []);
 
+  useEffect(()=>{
+    mostrarTooltipSiNovisto(view);
+  }, [view]);
+
   async function loadUser(id) {
     const { data:profile } = await supabase.from("profiles").select("*").eq("id",id).single();
     if(profile&&profile.activo){
@@ -8213,6 +8330,19 @@ export default function App() {
     setUser(null);
   }
 
+  const mostrarTooltipSiNovisto = (id) => {
+    const key = "blch-tooltip-"+id;
+    if(!localStorage.getItem(key)) {
+      setTooltipActivo(id);
+    }
+  };
+  const cerrarTooltip = () => {
+    if(tooltipActivo) {
+      localStorage.setItem("blch-tooltip-"+tooltipActivo, "1");
+      setTooltipActivo(null);
+    }
+  };
+
   if (!user) return <Login onLogin={u=>{ setUser(u); if(u.role!=="admin") setView("avisos"); loadAll(); }}/>;
 
   const navAvN   = (data.averias||[]).filter(b=>b.status==="nueva").length+(data.mantenimientos||[]).filter(m=>m.status==="nuevo").length;
@@ -8220,6 +8350,15 @@ export default function App() {
   const navPresN = (data.presupuestos||[]).filter(p=>["nuevo","enviado","aceptado"].includes(p.status)).length;
   const navContN = (data.instalaciones||[]).reduce((a,i)=>{ MT_TIPOS.forEach(t=>{ if(!i["activa_"+t])return; const inf=urgInfo(i["proxima_"+t]||null); if(inf.level!=="ok"&&inf.level!=="none") a++; }); return a; },0);
   const navFicN  = (()=>{ const h=new Date().getHours(); if(h<7||h>=20) return 0; return (data.profiles||[]).filter(p=>p.ficha!==false&&!(data.fichajesHoy||[]).find(f=>f.empleado_id===p.id&&f.entrada)).length; })();
+
+  const TOOLTIPS = {
+    avisos: { titulo:"Avisos — Averías y Mantenimientos", descripcion:"Aquí gestionas todas las incidencias de tus clientes. Crea un aviso cuando un cliente reporta una avería o necesita un mantenimiento. El técnico lo recibirá y podrá crear el parte de trabajo desde aquí." },
+    presupuestos: { titulo:"Presupuestos", descripcion:"Crea y envía presupuestos a tus clientes. Puedes vincularlos a un aviso existente. Cuando el cliente lo acepta puedes convertirlo en instalación directamente." },
+    instalaciones_obras: { titulo:"Instalaciones", descripcion:"Gestiona las obras e instalaciones en curso. Una instalación puede venir de un presupuesto aceptado o crearse directamente. Aquí controlas el estado y la facturación." },
+    contratos: { titulo:"Contratos de mantenimiento", descripcion:"Gestiona los contratos periódicos con tus clientes. Cada contrato agrupa los equipos del cliente con su frecuencia de revisión. Las revisiones pendientes aparecen automáticamente." },
+    clientes: { titulo:"Clientes", descripcion:"Tu base de datos de clientes. Cada cliente tiene su historial completo — averías, presupuestos, partes e instalaciones. Desde aquí puedes ver todo lo que se ha hecho para cada cliente." },
+    personal: { titulo:"Personal", descripcion:"Gestiona los usuarios de la app. Puedes crear técnicos para que accedan solo a sus avisos y partes, y admins para gestión completa." },
+  };
 
   function busquedaGlobal(query) {
     if(!query || query.trim().length < 2) return [];
@@ -8386,6 +8525,14 @@ export default function App() {
           );})}
         </div>}
       </div>
+      {tooltipActivo && TOOLTIPS[tooltipActivo] && (
+        <TooltipOnboarding
+          id={tooltipActivo}
+          titulo={TOOLTIPS[tooltipActivo].titulo}
+          descripcion={TOOLTIPS[tooltipActivo].descripcion}
+          onClose={cerrarTooltip}
+        />
+      )}
     </ErrorBoundary>
   );
 }
