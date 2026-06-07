@@ -860,6 +860,7 @@ function AveriaDetalle({ averia:initA, data, user, techs, empresa, refresh, onCl
   const [showParte, setShowParte] = useState(false);
   const [showEquipoHistorial, setShowEquipoHistorial] = useState(false);
   const fileRef = useRef();
+  const galleryRef = useRef();
   const notaRef = useRef();
   const [voiceActive, setVoiceActive] = useState(false);
 
@@ -1100,8 +1101,12 @@ function AveriaDetalle({ averia:initA, data, user, techs, empresa, refresh, onCl
           <div>
             <div style={{ display:"flex",justifyContent:"space-between",marginBottom:10 }}>
               <input ref={fileRef} type="file" accept="image/*" capture="environment" multiple style={{display:"none"}} onChange={subirFoto}/>
+              <input ref={galleryRef} type="file" accept="image/*" multiple style={{display:"none"}} onChange={subirFoto}/>
               <span style={{ fontSize:12,color:T.sub }}>{fotos.length}/4 fotos</span>
-              {fotos.length<4&&<Btn ch="Añadir foto" onClick={()=>fileRef.current.click()} v="g" sm/>}
+              {fotos.length<4 && <>
+                <Btn ch="Cámara" onClick={()=>fileRef.current.click()} v="g" sm/>
+                <Btn ch="Galería" onClick={()=>galleryRef.current.click()} v="s" sm/>
+              </>}
             </div>
             {fotos.length===0?<div onClick={()=>fileRef.current.click()} style={{ border:`2px dashed ${T.border}`,borderRadius:10,padding:30,textAlign:"center",cursor:"pointer",color:T.muted }}>Pulsa para añadir fotos</div>
             :<div style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8 }}>{fotos.map(f=><div key={f.id} style={{ position:"relative",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",border:`1px solid ${T.border}` }}><img src={getFotoUrl(f.storage_path)} alt="" onClick={()=>setFotoAmpliada(getFotoUrl(f.storage_path))} style={{ width:"100%",height:"100%",objectFit:"cover",cursor:"pointer" }}/><button onClick={async()=>{ await supabase.storage.from("fotos").remove([f.storage_path]); await supabase.from("fotos_averias").delete().eq("id",f.id); loadFotos(); }} style={{ position:"absolute",top:6,right:6,width:26,height:26,borderRadius:"50%",background:"rgba(0,0,0,0.6)",border:"none",color:"#fff",cursor:"pointer" }}>×</button></div>)}</div>}
@@ -1633,6 +1638,7 @@ function MantenimientoDetalle({ mant:initM, data, user, techs, empresa, refresh,
   const [showParte, setShowParte] = useState(false);
   const notaRef = useRef();
   const fileRef = useRef();
+  const galleryRef = useRef();
   const [voiceActive, setVoiceActive] = useState(false);
 
   const cl = (data.clientes||[]).find(c=>c.id===mant.cliente_id);
@@ -1799,9 +1805,13 @@ function MantenimientoDetalle({ mant:initM, data, user, techs, empresa, refresh,
         {tab==="fotos"&&(
           <div>
             <div style={{ display:"flex",justifyContent:"space-between",marginBottom:10 }}>
-              <span style={{ fontSize:12,color:T.sub }}>{fotos.length}/4 fotos</span>
-              {fotos.length<4&&<Btn ch="Foto / Cámara" onClick={()=>fileRef.current.click()} v="g" sm/>}
               <input ref={fileRef} type="file" accept="image/*" capture="environment" multiple style={{ display:"none" }} onChange={subirFoto}/>
+              <input ref={galleryRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={subirFoto}/>
+              <span style={{ fontSize:12,color:T.sub }}>{fotos.length}/4 fotos</span>
+              {fotos.length<4 && <>
+                <Btn ch="Cámara" onClick={()=>fileRef.current.click()} v="g" sm/>
+                <Btn ch="Galería" onClick={()=>galleryRef.current.click()} v="s" sm/>
+              </>}
             </div>
             {fotos.length===0?<div onClick={()=>fileRef.current.click()} style={{ border:`2px dashed ${T.border}`,borderRadius:10,padding:30,textAlign:"center",cursor:"pointer",color:T.muted }}>Pulsa para añadir fotos</div>
             :<div style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8 }}>{fotos.map(f=><div key={f.id} style={{ position:"relative",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",border:`1px solid ${T.border}` }}><img src={getFotoUrl(f.storage_path)} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/><button onClick={async()=>{ await supabase.storage.from("fotos").remove([f.storage_path]); await supabase.from("fotos_averias").delete().eq("id",f.id); loadFotos(); }} style={{ position:"absolute",top:6,right:6,width:26,height:26,borderRadius:"50%",background:"rgba(0,0,0,0.6)",border:"none",color:"#fff",cursor:"pointer" }}>×</button></div>)}</div>}
