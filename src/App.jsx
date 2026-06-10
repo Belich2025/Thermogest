@@ -4,17 +4,11 @@ import { requestNotificationPermission } from "./firebase.js";
 import { detectarAveria, mejorarDescripcion, detectarMateriales, asistirPresupuesto, generarParteCompleto, generarPresupuestoCompleto, generarLineasPresupuesto } from "./ai.js";
 
 async function sendPushNotification(profiles, title, body, role) {
-  console.log("sendPushNotification llamada - role:", role);
-  console.log("Perfiles totales:", profiles?.length);
-  const tokensEncontrados = (profiles||[]).filter(p=>p.role===role&&p.fcm_token).map(p=>p.fcm_token);
-  console.log("Tokens encontrados para role", role, ":", tokensEncontrados);
   const targets = (profiles||[]).filter(p=>
     (role==null||p.role===role) && p.fcm_token && p.activo!==false
   );
-  const tokens = targets.map(p=>p.fcm_token);
-  console.log("Enviando notificación a:", tokens);
-  console.log("Título:", title, "Cuerpo:", body);
   const tokensUnicos = [...new Set(targets.map(p=>p.fcm_token))];
+  console.log("Enviando", tokensUnicos.length, "notificaciones");
   await Promise.all(tokensUnicos.map(token=>
     supabase.functions.invoke("send-notification", { body:{ token, title, body } })
       .catch(e=>console.error("FCM push error:", e))
@@ -2102,6 +2096,7 @@ function NuevoAvisoModal({ data, user, techs, refresh, onClose }) {
   });
   const upd = (k,v) => setForm(p=>({...p,[k]:v}));
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [procesando, setProcesando] = useState(false);
   const [showNuevoCli, setShowNuevoCli] = useState(false);
   const [cliForm, setCliForm] = useState({ nombre:"", telefono:"", email:"", direccion:"", dni:"", notas:"" });
@@ -2280,7 +2275,10 @@ function NuevoAvisoModal({ data, user, techs, refresh, onClose }) {
   }
 
   async function save() {
+    console.log("SAVE EJECUTADO");
     if (!form.descripcion.trim() || !form.clienteId) { alert("Selecciona un cliente y escribe la descripción."); return; }
+    if(savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     const esAveria = form.tipo === "averia";
     const equipoVal = form.equipo.trim() || "Por determinar";
@@ -2295,6 +2293,7 @@ function NuevoAvisoModal({ data, user, techs, refresh, onClose }) {
       refresh?.(); onClose();
     } else alert("Error: " + error.message);
     setSaving(false);
+    savingRef.current = false;
   }
 
   return (
