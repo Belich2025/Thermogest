@@ -6369,6 +6369,14 @@ async function generarPresupuestoPDF(pres, cliente, empresa={}) {
 }
 
 /* ─── EMPRESA CONFIG ─────────────────────────────────────────────────────── */
+function getTextColor(hexColor) {
+  const hex = hexColor.replace('#','');
+  const r = parseInt(hex.substring(0,2),16);
+  const g = parseInt(hex.substring(2,4),16);
+  const b = parseInt(hex.substring(4,6),16);
+  const luminance = (0.299*r + 0.587*g + 0.114*b) / 255;
+  return luminance > 0.5 ? [30,30,30] : [255,255,255];
+}
 /* ── generarPartePDF ───────────────────────────────────────────────────── */
 async function generarPartePDF(parte, averia, cliente, empresa={}, titulo="PARTE DE TRABAJO") {
   try {
@@ -6379,7 +6387,8 @@ async function generarPartePDF(parte, averia, cliente, empresa={}, titulo="PARTE
     const doc = new JsPDF({unit:"mm",format:"a4"});
     const corp = empresa.color_corporativo||"#1d4ed8";
     const hr = h=>{ const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16); return [r,g,b]; };
-    const [O,W,D,G,L] = [hr(corp),[255,255,255],[15,23,42],[100,116,139],[248,250,252]];
+    const [O,D,G,L] = [hr(corp),[15,23,42],[100,116,139],[248,250,252]];
+    const W = getTextColor(empresa.color_corporativo || '#1d4ed8');
     const horas = (parte.hora_inicio&&parte.hora_fin)?(()=>{ const [h1,m1]=parte.hora_inicio.split(":").map(Number),[h2,m2]=parte.hora_fin.split(":").map(Number); return Math.max(0,((h2*60+m2)-(h1*60+m1))/60); })():0;
     const ph = parseFloat(parte.precio_hora||0);
     const tMO = horas*ph;
@@ -6877,8 +6886,8 @@ function EmpresaConfig({ empresa, setEmpresa }) {
                 {/* Preview */}
                 <div style={{ borderRadius:10,overflow:"hidden",border:`1px solid ${T.border}` }}>
                   <div style={{ background:color,padding:"10px 14px",display:"flex",alignItems:"center",gap:10 }}>
-                    {form.logo_url ? <img src={form.logo_url} alt="" style={{ height:28,objectFit:"contain" }}/> : <div style={{ width:28,height:28,borderRadius:7,background:"rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,color:"#fff" }}>{(form.nombre||"E")[0]}</div>}
-                    <span style={{ fontSize:13,fontWeight:700,color:"#fff",fontFamily:"'Sora',sans-serif" }}>{form.nombre||"Mi empresa"}</span>
+                    {form.logo_url ? <img src={form.logo_url} alt="" style={{ height:28,objectFit:"contain" }}/> : <div style={{ width:28,height:28,borderRadius:7,background:"rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,color:getTextColor(color||'#1d4ed8').map(v=>v.toString(16).padStart(2,'0')).reduce((a,b)=>'#'+a+b) }}>{(form.nombre||"E")[0]}</div>}
+                    <span style={{ fontSize:13,fontWeight:700,color:'#'+getTextColor(color||'#1d4ed8').map(v=>v.toString(16).padStart(2,'0')).join(''),fontFamily:"'Sora',sans-serif" }}>{form.nombre||"Mi empresa"}</span>
                   </div>
                   <div style={{ background:T.bg,padding:"8px 14px" }}>
                     <div style={{ fontSize:11,color:T.muted }}>Vista previa de cabecera PDF</div>
