@@ -1712,9 +1712,9 @@ function MantenimientoDetalle({ mant:initM, data, user, techs, empresa, refresh,
 
   useEffect(()=>{ loadNotas(); loadPartes(); loadFotos(); },[mant.id]);
 
-  async function loadNotas()  { const {data:d}=await supabase.from("notas_averias").select("*").eq("averia_id","mant_"+mant.id).order("created_at",{ascending:true}); setNotas(d||[]); }
+  async function loadNotas()  { const {data:d}=await supabase.from("notas_mantenimientos").select("*").eq("mantenimiento_id", mant.id).order("created_at",{ascending:true}); setNotas(d||[]); }
   async function loadPartes() { const {data:d}=await supabase.from("partes").select("*").eq("mantenimiento_id",mant.id).order("created_at",{ascending:false}); setPartes(d||[]); }
-  async function loadFotos()  { const {data:d}=await supabase.from("fotos_averias").select("*").eq("averia_id","mant_"+mant.id); setFotos(d||[]); }
+  async function loadFotos()  { const {data:d}=await supabase.from("fotos_averias").select("*").eq("mantenimiento_id", mant.id); setFotos(d||[]); }
 
   async function updStatus(newStatus) {
     const updates = { status: newStatus };
@@ -1726,13 +1726,13 @@ function MantenimientoDetalle({ mant:initM, data, user, techs, empresa, refresh,
 
   async function addNota(txt) {
     const texto = txt||nota.trim(); if(!texto) return;
-    await supabase.from("notas_averias").insert([{averia_id:"mant_"+mant.id,autor_id:user.id,autor_nombre:user.nombre,texto}]);
+    await supabase.from("notas_mantenimientos").insert([{mantenimiento_id: mant.id,autor_id:user.id,autor_nombre:user.nombre,texto}]);
     setNota(""); loadNotas();
   }
 
   async function subirFoto(e) {
     const files=Array.from(e.target.files).slice(0,4-fotos.length);
-    for(const file of files){ const ext=file.name.split(".").pop(); const path=`mantenimientos/${mant.id}/${Date.now()}.${ext}`; const {error}=await supabase.storage.from("fotos").upload(path,file,{upsert:false}); if(!error) await supabase.from("fotos_averias").insert([{averia_id:"mant_"+mant.id,storage_path:path}]); }
+    for(const file of files){ const ext=file.name.split(".").pop(); const path=`mantenimientos/${mant.id}/${Date.now()}.${ext}`; const {error}=await supabase.storage.from("fotos").upload(path,file,{upsert:false}); if(!error) await supabase.from("fotos_averias").insert([{mantenimiento_id: mant.id,storage_path:path}]); }
     loadFotos(); e.target.value="";
   }
 
@@ -1891,10 +1891,25 @@ function MantenimientoDetalle({ mant:initM, data, user, techs, empresa, refresh,
             <div style={{ display:"flex",gap:8,alignItems:"flex-end" }}>
               <textarea ref={notaRef} value={nota} onChange={e=>setNota(e.target.value)} placeholder="Añadir nota técnica..." style={{...inp(),flex:1,minHeight:60,resize:"none"}} onKeyDown={e=>{ if(e.key==="Enter"&&e.ctrlKey) addNota(); }}/>
               <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
-                {voiceActive
-                  ? <button onClick={()=>window.__stopVoice&&window.__stopVoice()} style={{ padding:"0 8px",height:36,borderRadius:8,border:"none",background:"#dc2626",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'DM Sans',sans-serif",fontSize:11,fontWeight:700,whiteSpace:"nowrap",animation:"pulse-red 1.5s infinite" }}>⏹ Parar</button>
-                  : <button onClick={()=>startVoice(t=>setNota(v=>v?v+" "+t:t))} style={{ width:36,height:36,borderRadius:8,border:"none",background:"linear-gradient(135deg,#3b82f6,#8b5cf6)",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700 }}>✦ IA</button>
-                }
+                <button onClick={()=>{
+                  if(!('webkitSpeechRecognition' in window||'SpeechRecognition' in window)){
+                    alert("Tu navegador no soporta el micrófono"); return;
+                  }
+                  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+                  const r = new SR();
+                  r.lang="es-ES"; r.continuous=false; r.interimResults=false;
+                  r.onresult=e=>{ setNota(p=>(p?p+" ":"")+e.results[0][0].transcript); };
+                  r.start();
+                }} style={{
+                  width:36, height:36, borderRadius:8, border:`1px solid ${T.border}`,
+                  background:T.surface, cursor:"pointer", display:"flex",
+                  alignItems:"center", justifyContent:"center", flexShrink:0
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.text} strokeWidth="2">
+                    <rect x="9" y="2" width="6" height="11" rx="3"/>
+                    <path d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
+                  </svg>
+                </button>
                 <Btn ch="OK" onClick={()=>addNota()} disabled={!nota.trim()}/>
               </div>
             </div>
@@ -6562,14 +6577,26 @@ async function generarPartePDF(parte, averia, cliente, empresa={}, titulo="PARTE
     // ── PIE ──
     const ph2=doc.internal.pageSize.height;
     doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(102,102,102);
-    const legalText="En cumplimiento de la Ley Orgánica 3/2018 de Protección de Datos Personales (LOPDGDD) y el Reglamento (UE) 2016/679 (RGPD), le informamos que sus datos serán tratados por "+(empresa.nombre||"")+" con la finalidad de gestionar los servicios contratados. Puede ejercer sus derechos de acceso, rectificación, supresión y portabilidad dirigiéndose a "+(empresa.email||"")+".";
-    const legalLines=doc.splitTextToSize(legalText,182);
-    doc.text(legalLines,14,ph2-22);
     doc.setFillColor(...D); doc.rect(0,ph2-10,210,10,"F");
     doc.setTextColor(100,116,139); doc.setFontSize(7); doc.setFont("helvetica","normal");
     doc.text((empresa.nombre||"")+(empresa.cif?" · CIF:"+empresa.cif:""),14,ph2-4);
     if(empresa.cuenta_iban) doc.text("IBAN: "+empresa.cuenta_iban,105,ph2-4,{align:"center"});
     doc.text((empresa.telefono||"")+(empresa.email?" · "+empresa.email:""),198,ph2-4,{align:"right"});
+
+    const textLOPD = `De acuerdo con lo establecido en el artículo 7 del Reglamento (UE) 2016/679 del Parlamento Europeo y del Consejo, de 27 de abril de 2016, relativo a la protección de las personas físicas en lo que respecta al tratamiento de datos personales y a la libre circulación de estos datos, el interesado concede su consentimiento libre y expreso en el tratamiento de sus datos personales, por parte del responsable del tratamiento ${empresa.nombre||""}.\n\nEn base al derecho de información establecido en el artículo 12 del mismo RGPD y en base al artículo 11 de la LOPD GDD, se le facilita la siguiente información, puede consultar la información ampliada en el siguiente enlace (https://intranet.laboralrgpd.com/rgpdA/index.php?id=26337.73963).\n\nFinalidades a tratar: Gestión contable, administrativa, de facturación y gestión de cobros, Prestarles un servicio, Tramitación de presupuestos, Envíos de información recíproca mediante la plataforma Whatsapp, sin que el Responsable pueda asegurar que dicha plataforma tome medidas de seguridad y realicen tratamientos adecuados al RGPD y la LOPDGDD.\n\nLegitimación: consentimiento inequívoco.\n\nDestinatarios: Administración tributaria, Bancos y entidades financieras, Gestoría/Asesoría, Encargados de destrucción de documentación, Entidades de Consultoría/Auditoría, Otros encargados del tratamiento.\n\nTiene derecho a acceder, rectificar y suprimir los datos, así como otros derechos, como se explica en la información adicional. Puede consultar la información adicional y detallada sobre Protección de Datos en el siguiente enlace: (Información Adicional). Sólo conservaremos su información por el periodo de tiempo necesario para cumplir con la finalidad para la que fuere cogida, dar cumplimiento a las obligaciones legales que nos vienen impuestas y atender las posibles responsabilidades que pudieran derivar del cumplimiento de la finalidad por la que los datos fueron recabados.`;
+
+    doc.addPage();
+    doc.setFillColor(...O);
+    doc.rect(0,0,210,20,"F");
+    doc.setTextColor(...W);
+    doc.setFontSize(10);
+    doc.setFont("helvetica","bold");
+    doc.text("INFORMACIÓN SOBRE PROTECCIÓN DE DATOS", 14, 13);
+    doc.setFontSize(7);
+    doc.setFont("helvetica","normal");
+    doc.setTextColor(30,30,30);
+    const lopd = doc.splitTextToSize(textLOPD, 182);
+    doc.text(lopd, 14, 30);
 
     doc.save(`parte_${String(averia.id||"")}_${(cliente?.nombre||"cliente").replace(/ /g,"_")}.pdf`);
   } catch(e){ console.error("PDF error:",e); alert("Error al generar PDF: "+e.message); }
