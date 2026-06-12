@@ -1626,11 +1626,12 @@ function ParteModal({ averia, cliente, user, empresa, profiles, refresh, onClose
               )}
             </div>
             {form.materiales.map((m,i)=>(
+              isMobile ? (
               <div key={i} style={{padding:"8px 10px", borderBottom:i<form.materiales.length-1?`1px solid ${T.border}`:"none"}}>
                 {/* Fila 1: descripción + micrófono + eliminar */}
-                <div style={{display:"flex", gap:4, alignItems:"center", marginBottom: isMobile?6:0}}>
+                <div style={{display:"flex", gap:4, alignItems:"center", marginBottom:6}}>
                   <div style={{position:"relative", flex:1, overflow:"visible"}}>
-                    <input value={m.desc} onChange={e=>{ updMat(i,"desc",e.target.value); setMatDrop(e.target.value.length>=2?i:-1); }} onBlur={()=>setTimeout(()=>setMatDrop(-1),150)} placeholder="Material o pieza" style={inp({padding:"7px 10px", fontSize: isMobile?14:12})}/>
+                    <input value={m.desc} onChange={e=>{ updMat(i,"desc",e.target.value); setMatDrop(e.target.value.length>=2?i:-1); }} onBlur={()=>setTimeout(()=>setMatDrop(-1),150)} placeholder="Material o pieza" style={inp({padding:"7px 10px", fontSize:14})}/>
                     {matDrop===i&&(()=>{ const sugs=(materiales||[]).filter(mat=>mat.activo!==false&&mat.nombre.toLowerCase().includes(m.desc.toLowerCase())).slice(0,6); if(!sugs.length) return null; return(<div style={{position:"absolute",top:"100%",left:0,right:0,background:T.card,border:`1px solid ${T.border}`,borderRadius:8,zIndex:200,boxShadow:"0 4px 12px #0002",maxHeight:160,overflowY:"auto"}}>{sugs.map((s,si)=>(<div key={si} onMouseDown={()=>{updMat(i,"desc",s.nombre);updMat(i,"precio",s.precio);setMatDrop(-1);}} style={{padding:"8px 12px",cursor:"pointer",fontSize:13,borderBottom:`1px solid ${T.border}`,color:T.text}} onMouseEnter={e=>e.currentTarget.style.background=T.surface} onMouseLeave={e=>e.currentTarget.style.background=T.card}>{s.nombre} <span style={{color:T.muted,fontSize:11}}>{s.precio}€</span></div>))}</div>);})()}
                   </div>
                   <button type="button" onClick={()=>startVoiceSimple(t=>{updMat(i,"desc",m.desc?m.desc+" "+t:t);})} style={{width:34,height:34,borderRadius:7,border:`1px solid ${T.border}`,background:T.surface,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
@@ -1656,6 +1657,19 @@ function ParteModal({ averia, cliente, user, empresa, profiles, refresh, onClose
                   </div>
                 </div>
               </div>
+              ) : (
+              <div key={i} style={{ display:"grid",gridTemplateColumns:"1fr 60px 75px 50px 34px 28px",gap:4,padding:"5px 10px",borderBottom:i<form.materiales.length-1?`1px solid ${T.border}`:"none",alignItems:"center",overflow:"visible" }}>
+                <div style={{position:"relative",overflow:"visible"}}>
+                  <input value={m.desc} onChange={e=>{ updMat(i,"desc",e.target.value); setMatDrop(e.target.value.length>=2?i:-1); }} onBlur={()=>setTimeout(()=>setMatDrop(-1),150)} placeholder="Material o pieza" style={inp({padding:"5px 8px",fontSize:12})}/>
+                  {matDrop===i&&(()=>{ const sugs=(materiales||[]).filter(mat=>mat.activo!==false&&mat.nombre.toLowerCase().includes(m.desc.toLowerCase())).slice(0,6); if(!sugs.length) return null; return(<div style={{position:"absolute",top:"100%",left:0,right:0,background:T.card,border:`1px solid ${T.border}`,borderRadius:8,zIndex:200,boxShadow:"0 4px 12px #0002",maxHeight:160,overflowY:"auto"}}>{sugs.map((s,si)=>(<div key={si} onMouseDown={()=>{updMat(i,"desc",s.nombre);updMat(i,"precio",s.precio);setMatDrop(-1);}} style={{padding:"8px 12px",cursor:"pointer",fontSize:13,borderBottom:`1px solid ${T.border}`,color:T.text}} onMouseEnter={e=>e.currentTarget.style.background=T.surface} onMouseLeave={e=>e.currentTarget.style.background=T.card}>{s.nombre} <span style={{color:T.muted,fontSize:11}}>{s.precio}€</span></div>))}</div>);})()}
+                </div>
+                <input type="number" value={m.qty} onChange={e=>updMat(i,"qty",e.target.value)} style={inp({padding:"5px 8px",fontSize:12})}/>
+                <input type="number" value={m.precio} onChange={e=>updMat(i,"precio",e.target.value)} placeholder="0.00" style={inp({padding:"5px 8px",fontSize:12})}/>
+                <span style={{ fontSize:11,fontWeight:600,color:"#7c3aed",textAlign:"center" }}>{m.qty&&m.precio?(parseFloat(m.qty)*parseFloat(m.precio)).toFixed(0):"—"}</span>
+                <button type="button" onClick={()=>startVoiceSimple(t=>{updMat(i,"desc",m.desc?m.desc+" "+t:t);})} style={{ width:34,height:34,borderRadius:8,border:`1px solid ${T.border}`,background:T.card,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2" strokeLinecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg></button>
+                <button onClick={()=>removeMat(i)} style={{ width:24,height:24,borderRadius:5,border:`1px solid ${T.border}`,background:T.card,color:T.muted,cursor:"pointer",fontSize:13 }}>×</button>
+              </div>
+              )
             ))}
           </div>
         </div>
