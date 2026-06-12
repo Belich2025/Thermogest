@@ -1607,20 +1607,54 @@ function ParteModal({ averia, cliente, user, empresa, profiles, refresh, onClose
             <Btn ch="+ Añadir" onClick={addMat} v="g" sm/>
           </div>
           <div style={{ background:T.surface,borderRadius:10,border:`1px solid ${T.border}`,overflow:"visible" }}>
-            <div style={{ display:"grid",gridTemplateColumns:"1fr 60px 75px 50px 34px 28px",gap:4,padding:"6px 10px",borderBottom:`1px solid ${T.border}`,borderRadius:"10px 10px 0 0",overflow:"hidden" }}>
-              {["Descripción","Cant.","Precio","Total","",""].map((h,i)=><span key={i} style={{ fontSize:9,fontWeight:600,color:T.muted,textTransform:"uppercase" }}>{h}</span>)}
+            <div style={{padding:"6px 10px", borderBottom:`1px solid ${T.border}`, borderRadius:"10px 10px 0 0", background:T.surface}}>
+              {isMobile ? (
+                <div>
+                  <span style={{fontSize:9, fontWeight:600, color:T.muted, textTransform:"uppercase"}}>Descripción</span>
+                  <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:6, marginTop:4}}>
+                    {["Cantidad","Precio","Total"].map(h=>(
+                      <span key={h} style={{fontSize:9, fontWeight:600, color:T.muted, textTransform:"uppercase"}}>{h}</span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={{display:"grid", gridTemplateColumns:"1fr 60px 75px 50px 34px 28px", gap:4}}>
+                  {["Descripción","Cant.","Precio","Total","",""].map((h,i)=>(
+                    <span key={i} style={{fontSize:9, fontWeight:600, color:T.muted, textTransform:"uppercase"}}>{h}</span>
+                  ))}
+                </div>
+              )}
             </div>
             {form.materiales.map((m,i)=>(
-              <div key={i} style={{ display:"grid",gridTemplateColumns:"1fr 60px 75px 50px 34px 28px",gap:4,padding:"5px 10px",borderBottom:i<form.materiales.length-1?`1px solid ${T.border}`:"none",alignItems:"center",overflow:"visible" }}>
-                <div style={{position:"relative",overflow:"visible"}}>
-                  <input value={m.desc} onChange={e=>{ updMat(i,"desc",e.target.value); setMatDrop(e.target.value.length>=2?i:-1); }} onBlur={()=>setTimeout(()=>setMatDrop(-1),150)} placeholder="Material o pieza" style={inp({padding:"5px 8px", fontSize:12, minWidth: isMobile?"140px":undefined})}/>
-                  {matDrop===i&&(()=>{ const q=m.desc.toLowerCase(); const sugs=(materiales||[]).filter(c=>c.nombre.toLowerCase().includes(q)).slice(0,6); return sugs.length?(<div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:9999,background:T.card,border:`1px solid ${T.border}`,borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,0.15)",maxHeight:200,overflowY:"auto"}}>{sugs.map(c=>(<button key={c.id} type="button" onMouseDown={()=>{ updMat(i,"desc",c.nombre); updMat(i,"precio",c.precio); setMatDrop(-1); }} style={{width:"100%",textAlign:"left",padding:"6px 10px",background:"none",border:"none",borderBottom:`1px solid ${T.border}`,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",fontFamily:"'DM Sans',sans-serif"}}><span style={{fontSize:12,color:T.text}}>{c.nombre}</span><span style={{fontSize:11,color:T.accent,fontWeight:600}}>{Number(c.precio).toFixed(2)}€</span></button>))}</div>):null; })()}
+              <div key={i} style={{padding:"8px 10px", borderBottom:i<form.materiales.length-1?`1px solid ${T.border}`:"none"}}>
+                {/* Fila 1: descripción + micrófono + eliminar */}
+                <div style={{display:"flex", gap:4, alignItems:"center", marginBottom: isMobile?6:0}}>
+                  <div style={{position:"relative", flex:1, overflow:"visible"}}>
+                    <input value={m.desc} onChange={e=>{ updMat(i,"desc",e.target.value); setMatDrop(e.target.value.length>=2?i:-1); }} onBlur={()=>setTimeout(()=>setMatDrop(-1),150)} placeholder="Material o pieza" style={inp({padding:"7px 10px", fontSize: isMobile?14:12})}/>
+                    {matDrop===i&&(()=>{ const sugs=(materiales||[]).filter(mat=>mat.activo!==false&&mat.nombre.toLowerCase().includes(m.desc.toLowerCase())).slice(0,6); if(!sugs.length) return null; return(<div style={{position:"absolute",top:"100%",left:0,right:0,background:T.card,border:`1px solid ${T.border}`,borderRadius:8,zIndex:200,boxShadow:"0 4px 12px #0002",maxHeight:160,overflowY:"auto"}}>{sugs.map((s,si)=>(<div key={si} onMouseDown={()=>{updMat(i,"desc",s.nombre);updMat(i,"precio",s.precio);setMatDrop(-1);}} style={{padding:"8px 12px",cursor:"pointer",fontSize:13,borderBottom:`1px solid ${T.border}`,color:T.text}} onMouseEnter={e=>e.currentTarget.style.background=T.surface} onMouseLeave={e=>e.currentTarget.style.background=T.card}>{s.nombre} <span style={{color:T.muted,fontSize:11}}>{s.precio}€</span></div>))}</div>);})()}
+                  </div>
+                  <button type="button" onClick={()=>startVoiceSimple(t=>{updMat(i,"desc",m.desc?m.desc+" "+t:t);})} style={{width:34,height:34,borderRadius:7,border:`1px solid ${T.border}`,background:T.surface,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.text} strokeWidth="2"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/></svg>
+                  </button>
+                  <button onClick={()=>removeMat(i)} style={{width:28,height:34,borderRadius:7,border:`1px solid ${T.red}40`,background:T.redLight,color:T.red,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
                 </div>
-                <input type="number" value={m.qty} onChange={e=>updMat(i,"qty",e.target.value)} style={inp({padding:"5px 8px",fontSize:12})}/>
-                <input type="number" value={m.precio} onChange={e=>updMat(i,"precio",e.target.value)} placeholder="0.00" style={inp({padding:"5px 8px",fontSize:12})}/>
-                <span style={{ fontSize:11,fontWeight:600,color:"#7c3aed",textAlign:"center" }}>{m.qty&&m.precio?(parseFloat(m.qty)*parseFloat(m.precio)).toFixed(0):"—"}</span>
-                <button type="button" onClick={()=>startVoiceSimple(t=>{ const norm=s=>s.toLowerCase().trim().normalize("NFD").replace(/[̀-ͯ]/g,""); updMat(i,"desc",t); const match=(materiales||[]).find(c=>norm(c.nombre)===norm(t)); if(match) updMat(i,"precio",match.precio); })} style={{ width:34,height:34,borderRadius:8,border:`1px solid ${T.border}`,background:T.card,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2" strokeLinecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg></button>
-                <button onClick={()=>removeMat(i)} style={{ width:24,height:24,borderRadius:5,border:`1px solid ${T.border}`,background:T.card,color:T.muted,cursor:"pointer",fontSize:13 }}>×</button>
+                {/* Fila 2: cantidad + precio + total */}
+                <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:6}}>
+                  <div>
+                    <div style={{fontSize:10,color:T.muted,marginBottom:2,fontWeight:600}}>CANTIDAD</div>
+                    <input type="number" value={m.qty} onChange={e=>updMat(i,"qty",e.target.value)} style={inp({padding:"6px 8px",fontSize:13,textAlign:"center"})}/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:10,color:T.muted,marginBottom:2,fontWeight:600}}>PRECIO</div>
+                    <input type="number" value={m.precio} onChange={e=>updMat(i,"precio",e.target.value)} placeholder="0.00" style={inp({padding:"6px 8px",fontSize:13,textAlign:"center"})}/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:10,color:T.muted,marginBottom:2,fontWeight:600}}>TOTAL</div>
+                    <div style={{padding:"6px 8px",borderRadius:8,background:T.surface,border:`1px solid ${T.border}`,fontSize:13,fontWeight:700,color:"#7c3aed",textAlign:"center",height:36,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      {m.qty&&m.precio?(parseFloat(m.qty)*parseFloat(m.precio)).toFixed(2)+"€":"—"}
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
