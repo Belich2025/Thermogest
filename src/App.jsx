@@ -1607,30 +1607,22 @@ function ParteModal({ averia, cliente, user, empresa, profiles, refresh, onClose
             <Btn ch="+ Añadir" onClick={addMat} v="g" sm/>
           </div>
           <div style={{ background:T.surface,borderRadius:10,border:`1px solid ${T.border}`,overflow:"visible" }}>
-            <div style={{padding:"6px 10px", borderBottom:`1px solid ${T.border}`, borderRadius:"10px 10px 0 0", background:T.surface}}>
-              {isMobile ? (
-                <div>
-                  <span style={{fontSize:9, fontWeight:600, color:T.muted, textTransform:"uppercase"}}>Descripción</span>
-                  <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:6, marginTop:4}}>
-                    {["Cantidad","Precio","Total"].map(h=>(
-                      <span key={h} style={{fontSize:9, fontWeight:600, color:T.muted, textTransform:"uppercase"}}>{h}</span>
-                    ))}
-                  </div>
-                </div>
-              ) : (
+            {!isMobile && (
+              <div style={{padding:"6px 10px", borderBottom:`1px solid ${T.border}`, borderRadius:"10px 10px 0 0", background:T.surface}}>
                 <div style={{display:"grid", gridTemplateColumns:"1fr 60px 75px 50px 34px 28px", gap:4}}>
                   {["Descripción","Cant.","Precio","Total","",""].map((h,i)=>(
                     <span key={i} style={{fontSize:9, fontWeight:600, color:T.muted, textTransform:"uppercase"}}>{h}</span>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
             {form.materiales.map((m,i)=>(
               isMobile ? (
               <div key={i} style={{padding:"8px 10px", borderBottom:i<form.materiales.length-1?`1px solid ${T.border}`:"none"}}>
                 {/* Fila 1: descripción + micrófono + eliminar */}
                 <div style={{display:"flex", gap:4, alignItems:"center", marginBottom:6}}>
                   <div style={{position:"relative", flex:1, overflow:"visible"}}>
+                    <div style={{fontSize:10, color:T.muted, fontWeight:600, marginBottom:2}}>DESCRIPCIÓN</div>
                     <input value={m.desc} onChange={e=>{ updMat(i,"desc",e.target.value); setMatDrop(e.target.value.length>=2?i:-1); }} onBlur={()=>setTimeout(()=>setMatDrop(-1),150)} placeholder="Material o pieza" style={inp({padding:"7px 10px", fontSize:14})}/>
                     {matDrop===i&&(()=>{ const sugs=(materiales||[]).filter(mat=>mat.activo!==false&&mat.nombre.toLowerCase().includes(m.desc.toLowerCase())).slice(0,6); if(!sugs.length) return null; return(<div style={{position:"absolute",top:"100%",left:0,right:0,background:T.card,border:`1px solid ${T.border}`,borderRadius:8,zIndex:200,boxShadow:"0 4px 12px #0002",maxHeight:160,overflowY:"auto"}}>{sugs.map((s,si)=>(<div key={si} onMouseDown={()=>{updMat(i,"desc",s.nombre);updMat(i,"precio",s.precio);setMatDrop(-1);}} style={{padding:"8px 12px",cursor:"pointer",fontSize:13,borderBottom:`1px solid ${T.border}`,color:T.text}} onMouseEnter={e=>e.currentTarget.style.background=T.surface} onMouseLeave={e=>e.currentTarget.style.background=T.card}>{s.nombre} <span style={{color:T.muted,fontSize:11}}>{s.precio}€</span></div>))}</div>);})()}
                   </div>
