@@ -4,8 +4,6 @@ import { requestNotificationPermission } from "./firebase.js";
 import { detectarAveria, mejorarDescripcion, detectarMateriales, asistirPresupuesto, generarParteCompleto, generarPresupuestoCompleto, generarLineasPresupuesto } from "./ai.js";
 
 async function sendPushNotification(profiles, title, body, role) {
-  const execId = Date.now()+"-"+Math.random().toString(36).slice(2,6);
-  console.warn("🔔 sendPush INICIO", execId, "role:", role, "perfiles:", profiles?.length);
   const targets = (profiles||[]).filter(p=>
     (role==null||p.role===role) && p.fcm_token && p.activo!==false
   );
