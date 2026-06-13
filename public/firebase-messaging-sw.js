@@ -13,12 +13,9 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(payload => {
-  const { title, body } = payload.notification;
-  self.registration.showNotification(title, {
-    body,
-    icon: "/icon-192.png",
-    badge: "/icon-192.png"
-  });
+  // FCM muestra la notificación automáticamente
+  // No llamamos a showNotification para evitar duplicados
+  console.log('Background message recibido:', payload);
 });
 
 self.addEventListener('notificationclick', function(event) {
