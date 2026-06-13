@@ -17,7 +17,9 @@ messaging.onBackgroundMessage(payload => {
   self.registration.showNotification(title, {
     body,
     icon: "/icon-192.png",
-    badge: "/icon-192.png"
+    badge: "/icon-192.png",
+    tag: "blch-" + (title + (body||"")).slice(0,30),
+    renotify: false
   });
 });
 
