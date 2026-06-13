@@ -13,14 +13,11 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(payload => {
-  const { title, body } = payload.notification || payload.data || {};
-  if(!title) return;
+  const { title, body } = payload.notification;
   self.registration.showNotification(title, {
-    body: body || "",
+    body,
     icon: "/icon-192.png",
-    badge: "/icon-192.png",
-    tag: title + (body||"").slice(0,20),
-    renotify: false
+    badge: "/icon-192.png"
   });
 });
 
