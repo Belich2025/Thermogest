@@ -13,9 +13,15 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(payload => {
-  // FCM muestra la notificación automáticamente
-  // No llamamos a showNotification para evitar duplicados
-  console.log('Background message recibido:', payload);
+  const { title, body } = payload.notification || payload.data || {};
+  if(!title) return;
+  self.registration.showNotification(title, {
+    body: body || "",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+    tag: title + (body||"").slice(0,20),
+    renotify: false
+  });
 });
 
 self.addEventListener('notificationclick', function(event) {
