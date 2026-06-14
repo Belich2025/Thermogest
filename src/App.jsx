@@ -2404,7 +2404,6 @@ function NuevoAvisoModal({ data, user, techs, refresh, onClose }) {
     if (!error) {
       const clNombre = (data.clientes||[]).find(c=>c.id===form.clienteId)?.nombre || "cliente";
       console.log("DATA PROFILES AL GUARDAR:", data?.profiles?.length, data?.profiles?.map(p=>({nombre:p.nombre, role:p.role, fcm_token:p.fcm_token?.slice(0,20)})));
-      sendPushNotification(data.profiles, "Nuevo aviso - " + clNombre, form.descripcion?.slice(0,100) || "Sin descripción", null);
       refresh?.(); onClose();
     } else alert("Error: " + error.message);
     setSaving(false);
