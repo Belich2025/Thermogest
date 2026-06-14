@@ -8468,6 +8468,7 @@ export default function App() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchVoiceRef = useRef(false);
+  const fcmRequestedRef = useRef(false);
   const [searchVoiceActive, setSearchVoiceActive] = useState(false);
   const [tooltipActivo, setTooltipActivo] = useState(null);
   _setTooltip = setTooltipActivo;
@@ -8522,12 +8523,15 @@ export default function App() {
       setUser(profile);
       if(profile.role!=="admin") setView("avisos");
       loadAll();
+      if (!fcmRequestedRef.current) {
+      fcmRequestedRef.current = true;
       const fcmToken = await requestNotificationPermission();
       console.log("5. Token FCM obtenido:", fcmToken ? fcmToken.slice(0,20)+"..." : "null");
       if(fcmToken) {
         await supabase.from("profiles").update({ fcm_token: null }).eq("fcm_token", fcmToken);
         const { error: fcmErr } = await supabase.from("profiles").update({ fcm_token: fcmToken }).eq("id", id);
         console.log("6. Token guardado en DB:", fcmErr ? "ERROR: "+fcmErr.message : "OK");
+      }
       }
     } else { await supabase.auth.signOut(); }
   }
