@@ -4,6 +4,7 @@
 .env*.local
 node_modules/
 dist/
+supabase/.temp/
 *.json
 !vercel.json
 thermogest-60f98-firebase-adminsdk-fbsvc-74b052000e.json

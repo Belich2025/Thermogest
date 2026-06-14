@@ -4924,7 +4924,7 @@ function ClienteDetalle({ cliente, data, refresh, onClose, onSelectAveria, onSel
             </button>
             {cliente.portal_token ? (
               <button onClick={()=>{
-                navigator.clipboard.writeText(window.location.origin+"/portal/"+cliente.portal_token);
+                navigator.clipboard.writeText(window.location.origin+"/cliente/"+cliente.portal_token);
                 alert("Enlace copiado");
               }} style={{padding:"8px 16px",borderRadius:8,border:`1px solid ${T.border}`,
                 background:T.surface,color:T.text,cursor:"pointer",fontSize:13}}>
@@ -4932,7 +4932,7 @@ function ClienteDetalle({ cliente, data, refresh, onClose, onSelectAveria, onSel
               </button>
             ) : (
               <button onClick={async()=>{
-                const token = Math.random().toString(36).slice(2);
+                const token = crypto.randomUUID();
                 await supabase.from("clientes").update({portal_token:token}).eq("id",cliente.id);
                 refresh?.();
               }} style={{padding:"8px 16px",borderRadius:8,border:`1px solid ${T.accent}40`,

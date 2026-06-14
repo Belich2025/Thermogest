@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  "https://sqwbxmewymvmnegszzte.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd2J4bWV3eW12bW5lZ3N6enRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyODMzNzcsImV4cCI6MjA5Mzg1OTM3N30.z_vGOPEqZXTQp9hWaiAjU-7Q1s8vACwfseB4UWIrfgM",
-  { auth: { persistSession: false, autoRefreshToken: false } }
-);
+const SUPABASE_URL = "https://sqwbxmewymvmnegszzte.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd2J4bWV3eW12bW5lZ3N6enRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyODMzNzcsImV4cCI6MjA5Mzg1OTM3N30.z_vGOPEqZXTQp9hWaiAjU-7Q1s8vACwfseB4UWIrfgM";
+const PORTAL_DATA_URL = `${SUPABASE_URL}/functions/v1/portal-data`;
 
 const T = {
   accent:"#1d4ed8", accentLight:"#eff6ff",
@@ -52,6 +49,8 @@ const inp = (x={}) => ({
 export default function Portal() {
   const token = window.location.pathname.split("/cliente/")[1];
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [cliente, setCliente] = useState(null);
   const [data, setData] = useState({ averias:[], presupuestos:[], instalaciones:[], equipos:[], revisiones:[], partes:[] });
   const [tab, setTab] = useState("averias");
@@ -64,24 +63,26 @@ export default function Portal() {
 
   async function load() {
     setLoading(true);
-    const { data:cl } = await supabase.from("clientes").select("*").eq("portal_token",token).single();
-    if(!cl){ setLoading(false); return; }
-    setCliente(cl);
-    const [avs, pres, insts, eqs, revs] = await Promise.all([
-      supabase.from("averias").select("*").eq("cliente_id",cl.id).order("created_at",{ascending:false}),
-      supabase.from("presupuestos").select("*").eq("cliente_id",cl.id).order("created_at",{ascending:false}),
-      supabase.from("instalaciones").select("*").eq("cliente_id",cl.id),
-      supabase.from("equipos").select("*").eq("cliente_id",cl.id),
-      supabase.from("revisiones").select("*").eq("cliente_id",cl.id).order("fecha",{ascending:false}),
-    ]);
-    // Get partes for all averias
-    const averiaIds=(avs.data||[]).map(a=>a.id);
-    let partes=[];
-    if(averiaIds.length>0){
-      const {data:pts}=await supabase.from("partes").select("*").in("averia_id",averiaIds);
-      partes=pts||[];
+    setNotFound(false);
+    setLoadError(false);
+    try {
+      const res = await fetch(PORTAL_DATA_URL, {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          Authorization:`Bearer ${SUPABASE_ANON_KEY}`,
+          apikey:SUPABASE_ANON_KEY,
+        },
+        body:JSON.stringify({ token }),
+      });
+      if(res.status===404){ setNotFound(true); setLoading(false); return; }
+      if(!res.ok){ setLoadError(true); setLoading(false); return; }
+      const json = await res.json();
+      setCliente(json.cliente);
+      setData({ averias:json.averias||[], presupuestos:json.presupuestos||[], instalaciones:json.instalaciones||[], equipos:json.equipos||[], revisiones:json.revisiones||[], partes:json.partes||[] });
+    } catch(e) {
+      setLoadError(true);
     }
-    setData({ averias:avs.data||[], presupuestos:pres.data||[], instalaciones:insts.data||[], equipos:eqs.data||[], revisiones:revs.data||[], partes });
     setLoading(false);
   }
 
@@ -122,7 +123,7 @@ export default function Portal() {
     </div>
   );
 
-  if(!cliente) return (
+  if(notFound) return (
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#f1f5f9", fontFamily:"'DM Sans',sans-serif" }}>
       <div style={{ textAlign:"center", padding:32 }}>
         <div style={{ fontSize:48, marginBottom:16 }}>🔒</div>
@@ -131,6 +132,21 @@ export default function Portal() {
       </div>
     </div>
   );
+
+  if(loadError) return (
+    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#f1f5f9", fontFamily:"'DM Sans',sans-serif" }}>
+      <div style={{ textAlign:"center", padding:32 }}>
+        <div style={{ fontSize:48, marginBottom:16 }}>⚠️</div>
+        <h1 style={{ color:T.text, fontFamily:"'Sora',sans-serif" }}>No se pudieron cargar los datos</h1>
+        <p style={{ color:T.muted, marginBottom:16 }}>Comprueba tu conexión e inténtalo de nuevo.</p>
+        <button onClick={load} style={{ background:T.accent, color:"#fff", border:"none", borderRadius:10, padding:"11px 24px", fontSize:15, fontWeight:600, fontFamily:"'DM Sans',sans-serif", cursor:"pointer" }}>
+          Reintentar
+        </button>
+      </div>
+    </div>
+  );
+
+  if(!cliente) return null;
 
   const tabs = [
     { k:"averias",      l:`Averías (${data.averias.length})` },
@@ -281,18 +297,29 @@ export default function Portal() {
         {tab==="contratos" && (
           <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
             {data.instalaciones.length===0&&<div style={{ textAlign:"center",padding:"40px",color:T.muted,fontSize:14,background:"#fff",borderRadius:12,border:`1px solid ${T.border}` }}>Sin contratos activos</div>}
-            {data.instalaciones.map(i=>(
+            {data.instalaciones.map(i=>{
+              const instEquipos = data.equipos.filter(eq=>eq.instalacion_id===i.id);
+              return (
               <div key={i.id} style={{ background:"#fff",border:`1px solid ${T.border}`,borderRadius:12,padding:"16px",boxShadow:"0 1px 4px rgba(0,0,0,0.04)" }}>
                 <div style={{ fontSize:15,fontWeight:700,color:T.text,marginBottom:10 }}>{i.nombre}</div>
                 {i.tipo&&<div style={{ fontSize:12,color:T.muted,marginBottom:10 }}>Equipo: {i.tipo}</div>}
-                <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
-                  {["mensual","trimestral","semestral","anual"].map(tipo=>{ if(!i["activa_"+tipo]) return null; const mt=MT[tipo]; const urg=urgInfo(i["proxima_"+tipo]); return (
-                    <div key={tipo} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",borderRadius:9,background:T.surface,border:`1px solid ${T.border}` }}>
-                      <span style={{ fontSize:13,fontWeight:600,color:mt.color }}>{mt.label}</span>
-                      <span style={{ fontSize:12,fontWeight:600,color:urg.color }}>Próxima: {urg.label}</span>
-                    </div>
-                  ); })}
-                </div>
+                {instEquipos.length===0 ? (
+                  <div style={{ fontSize:12,color:T.muted }}>Sin equipos asociados</div>
+                ) : (
+                  <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
+                    {instEquipos.map(eq=>(
+                      <div key={eq.id} style={{ display:"flex",flexDirection:"column",gap:8 }}>
+                        <div style={{ fontSize:13,fontWeight:600,color:T.text }}>{eq.nombre}</div>
+                        {["mensual","trimestral","semestral","anual"].map(tipo=>{ if(!eq["activa_"+tipo]) return null; const mt=MT[tipo]; const urg=urgInfo(eq["proxima_"+tipo]); return (
+                          <div key={tipo} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",borderRadius:9,background:T.surface,border:`1px solid ${T.border}` }}>
+                            <span style={{ fontSize:13,fontWeight:600,color:mt.color }}>{mt.label}</span>
+                            <span style={{ fontSize:12,fontWeight:600,color:urg.color }}>Próxima: {urg.label}</span>
+                          </div>
+                        ); })}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {/* Revisiones recientes */}
                 {data.revisiones.filter(r=>r.instalacion_id===i.id).length>0&&(
                   <div style={{ marginTop:12,borderTop:`1px solid ${T.border}`,paddingTop:10 }}>
@@ -306,7 +333,7 @@ export default function Portal() {
                   </div>
                 )}
               </div>
-            ))}
+              ); })}
           </div>
         )}
 
