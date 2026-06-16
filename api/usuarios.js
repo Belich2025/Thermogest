@@ -8,6 +8,21 @@ const supabase = createClient(
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  const authHeader = req.headers['authorization'] || '';
+  const jwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!jwt) return res.status(401).json({ error: 'No autorizado' });
+
+  const { data: { user }, error: userErr } = await supabase.auth.getUser(jwt);
+  if (userErr || !user) return res.status(401).json({ error: 'Token inválido' });
+
+  const { data: profile, error: profErr } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+  if (profErr || !profile || profile.role !== 'admin')
+    return res.status(403).json({ error: 'Acceso denegado' });
+
   const { accion, email, password, nombre, telefono, role, color, userId } = req.body;
 
   try {

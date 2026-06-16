@@ -8243,9 +8243,13 @@ function NuevoUsuarioModal({ onClose, onCreated, colores }) {
     if(form.password.length < 6){ setError("La contraseña debe tener al menos 6 caracteres."); return; }
     setSaving(true); setError("");
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/usuarios", {
         method:"POST",
-        headers:{"Content-Type":"application/json"},
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           accion:"crear", email:form.email.trim(), password:form.password,
           nombre:form.nombre.trim(), telefono:form.telefono||null,
@@ -8320,9 +8324,13 @@ function EditarUsuarioModal({ u, onClose, onSaved, colores }) {
     if(!window.confirm(`¿Eliminar a ${u.nombre}? Perderá el acceso permanentemente.`)) return;
     setSaving(true); setError("");
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/usuarios", {
         method:"POST",
-        headers:{"Content-Type":"application/json"},
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ accion:"eliminar", userId:u.id }),
       });
       const json = await res.json();
