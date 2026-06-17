@@ -51,6 +51,24 @@ let T = T_LIGHT;
 let _setTooltip = ()=>{};
 const SunIcon  = ()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="6.34" y1="17.66" x2="4.93" y2="19.07"/><line x1="19.07" y1="4.93" x2="17.66" y2="6.34"/></svg>;
 const MoonIcon = ()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>;
+function BotonNomina({ n }) {
+  const [cargando, setCargando] = React.useState(false);
+  async function abrir() {
+    setCargando(true);
+    const { data, error } = await supabase.storage.from("pdfs").createSignedUrl(n.archivo_url, 3600);
+    setCargando(false);
+    if (error) { alert("No se pudo generar el enlace: " + error.message); return; }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+  return (
+    <button onClick={abrir} disabled={cargando}
+      style={{ padding:"8px 16px",borderRadius:9,background:T.accentLight,border:"1.5px solid "+T.accent+"40",
+               color:T.accent,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",
+               flexShrink:0,opacity:cargando?0.6:1 }}>
+      {cargando ? "Cargando…" : "Ver / Descargar"}
+    </button>
+  );
+}
 const AIBtn = ({ch,onClick,disabled})=>(
   <button type="button" onClick={onClick} disabled={disabled}
     style={{display:"inline-flex",alignItems:"center",gap:5,padding:"6px 13px",borderRadius:8,border:"none",cursor:disabled?"not-allowed":"pointer",background:"linear-gradient(135deg,#3b82f6 0%,#7c3aed 100%)",color:"#fff",fontSize:12,fontWeight:600,fontFamily:"'DM Sans',sans-serif",opacity:disabled?0.72:1,flexShrink:0,whiteSpace:"nowrap",transition:"opacity 0.15s"}}>
@@ -7638,14 +7656,14 @@ function FichajesView({ data, user, refresh, empresa={} }) {
     const path = `nominas/${nominaForm.empleadoId}/${nominaForm.mes}_${nominaForm.año}.pdf`;
     const { error:upErr } = await supabase.storage.from("pdfs").upload(path, file, {upsert:true});
     if(upErr){ alert("Error subiendo nómina: "+upErr.message); setSubiendoNomina(false); return; }
-    const { data:urlData } = supabase.storage.from("pdfs").getPublicUrl(path);
+    // archivo_url almacena el storage path, no una URL pública
     await supabase.from("nominas").delete().eq("empleado_id",nominaForm.empleadoId).eq("mes",nominaForm.mes).eq("año",nominaForm.año);
     const { error:dbErr } = await supabase.from("nominas").insert([{
       empleado_id: nominaForm.empleadoId,
       empleado_nombre: emp?.nombre||"—",
       mes: nominaForm.mes,
       año: nominaForm.año,
-      archivo_url: urlData.publicUrl,
+      archivo_url: path,
     }]);
     if(dbErr) alert("Error guardando nómina: "+dbErr.message);
     else await cargarNominas();
@@ -8146,10 +8164,7 @@ function FichajesView({ data, user, refresh, empresa={} }) {
                       {isAdmin&&<div style={{ fontSize:11,color:T.muted,marginBottom:2 }}>{n.empleado_nombre}</div>}
                       <div style={{ fontSize:14,fontWeight:600,color:T.text }}>{mesNombre} {n.año}</div>
                     </div>
-                    <a href={n.archivo_url} target="_blank" rel="noopener noreferrer"
-                      style={{ padding:"8px 16px",borderRadius:9,background:T.accentLight,border:"1.5px solid "+T.accent+"40",color:T.accent,fontSize:12,fontWeight:600,textDecoration:"none",whiteSpace:"nowrap",flexShrink:0 }}>
-                      Ver / Descargar
-                    </a>
+                    <BotonNomina n={n} />
                   </div>
                 );
               })}
