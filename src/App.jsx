@@ -5,6 +5,8 @@ import { detectarAveria, mejorarDescripcion, detectarMateriales, asistirPresupue
 import { todayStr, addDays, urgInfo } from "./utils/dates.js";
 import { openMaps, sendEmail } from "./utils/links.js";
 import { getTextColor } from "./utils/color.js";
+import { useIsMobile } from "./hooks/useIsMobile.js";
+import { startVoiceSimple } from "./hooks/useVoice.js";
 
 async function sendPushNotification(profiles, title, body, role) {
   const targets = (profiles||[]).filter(p=>
@@ -19,16 +21,6 @@ async function sendPushNotification(profiles, title, body, role) {
 }
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
-function useIsMobile() {
-  const [v, setV] = useState(window.innerWidth < 768);
-  useEffect(() => {
-    const fn = () => setV(window.innerWidth < 768);
-    window.addEventListener("resize", fn);
-    return () => window.removeEventListener("resize", fn);
-  }, []);
-  return v;
-}
-
 /* ─── THEME ──────────────────────────────────────────────────────────────── */
 const T_LIGHT = {
   bg:"#f8fafc", card:"#ffffff", surface:"#f1f5f9",
@@ -174,24 +166,6 @@ const MT = {
 };
 const UCOL = { urgente:T.red, hoy:T.orange, semana:"#f59e0b", prox:T.teal, ok:T.muted, none:T.muted };
 /* ─── VOICE SIMPLE ──────────────────────────────────────────────────────── */
-function startVoiceSimple(cb) {
-  if(!("webkitSpeechRecognition" in window||"SpeechRecognition" in window)) return;
-  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
-  const r = new SR();
-  r.lang = "es-ES"; r.interimResults = false; r.continuous = false; r.maxAlternatives = 1;
-  let called = false;
-  r.onresult = e => {
-    if(called) return;
-    const result = e.results[e.results.length-1];
-    if(!result.isFinal) return;
-    called = true;
-    cb(result[0].transcript);
-    r.stop();
-  };
-  r.onerror = e => console.error("Voice error:", e.error);
-  r.start();
-}
-
 /* ─── HELPERS ────────────────────────────────────────────────────────────── */
 const inp = (x={}) => ({
   width:"100%", boxSizing:"border-box", background:T.input,
