@@ -3,6 +3,7 @@ import { supabase } from "./supabase.js";
 import { requestNotificationPermission } from "./firebase.js";
 import { detectarAveria, mejorarDescripcion, detectarMateriales, asistirPresupuesto, generarParteCompleto, generarPresupuestoCompleto, generarLineasPresupuesto } from "./ai.js";
 import { todayStr, addDays, urgInfo } from "./utils/dates.js";
+import { openMaps, sendEmail } from "./utils/links.js";
 
 async function sendPushNotification(profiles, title, body, role) {
   const targets = (profiles||[]).filter(p=>
@@ -197,8 +198,6 @@ const inp = (x={}) => ({
   color:T.text, fontSize:14, outline:"none", fontFamily:"'DM Sans',sans-serif",
   transition:"border-color 0.15s", ...x,
 });
-function openMaps(addr) { window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}&travelmode=driving`,"_blank"); }
-function sendEmail({to,subject,body}) { window.open(`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,"_blank"); }
 
 /* ─── ATOMS ──────────────────────────────────────────────────────────────── */
 function Badge({ status, type="b" }) {
