@@ -115,12 +115,6 @@ serve(async (req) => {
           token,
           notification: { title, body: body ?? "" },
           webpush: {
-            notification: {
-              title,
-              body:  body ?? "",
-              icon:  "/icon-192.png",
-              badge: "/icon-192.png",
-            },
             fcm_options: { link: "/" },
           },
         },
