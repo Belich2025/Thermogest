@@ -4,6 +4,7 @@ import { requestNotificationPermission } from "./firebase.js";
 import { detectarAveria, mejorarDescripcion, detectarMateriales, asistirPresupuesto, generarParteCompleto, generarPresupuestoCompleto, generarLineasPresupuesto } from "./ai.js";
 import { todayStr, addDays, urgInfo } from "./utils/dates.js";
 import { openMaps, sendEmail } from "./utils/links.js";
+import { getTextColor } from "./utils/color.js";
 
 async function sendPushNotification(profiles, title, body, role) {
   const targets = (profiles||[]).filter(p=>
@@ -6493,15 +6494,6 @@ async function generarPresupuestoPDF(pres, cliente, empresa={}) {
   }
 }
 
-/* ─── EMPRESA CONFIG ─────────────────────────────────────────────────────── */
-function getTextColor(hexColor) {
-  const hex = hexColor.replace('#','');
-  const r = parseInt(hex.substring(0,2),16);
-  const g = parseInt(hex.substring(2,4),16);
-  const b = parseInt(hex.substring(4,6),16);
-  const luminance = (0.299*r + 0.587*g + 0.114*b) / 255;
-  return luminance > 0.5 ? [30,30,30] : [255,255,255];
-}
 /* ── generarPartePDF ───────────────────────────────────────────────────── */
 async function generarPartePDF(parte, averia, cliente, empresa={}, titulo="PARTE DE TRABAJO") {
   try {
