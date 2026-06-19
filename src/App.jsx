@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./supabase.js";
 import { requestNotificationPermission } from "./firebase.js";
 import { detectarAveria, mejorarDescripcion, detectarMateriales, asistirPresupuesto, generarParteCompleto, generarPresupuestoCompleto, generarLineasPresupuesto } from "./ai.js";
+import { todayStr, addDays, urgInfo } from "./utils/dates.js";
 
 async function sendPushNotification(profiles, title, body, role) {
   const targets = (profiles||[]).filter(p=>
@@ -196,17 +197,6 @@ const inp = (x={}) => ({
   color:T.text, fontSize:14, outline:"none", fontFamily:"'DM Sans',sans-serif",
   transition:"border-color 0.15s", ...x,
 });
-function todayStr() { return new Date().toISOString().slice(0,10); }
-function addDays(d,n) { const dt=new Date(d+"T12:00:00"); dt.setDate(dt.getDate()+n); return dt.toISOString().slice(0,10); }
-function urgInfo(prox) {
-  if (!prox) return { level:"none", label:"Sin programar", days:null };
-  const d = Math.round((new Date(prox+"T12:00:00")-new Date())/86400000);
-  if (d<0)   return { level:"urgente", label:`Vencida hace ${Math.abs(d)}d`, days:d };
-  if (d===0) return { level:"hoy",     label:"Hoy", days:0 };
-  if (d<=7)  return { level:"semana",  label:`En ${d}d`, days:d };
-  if (d<=30) return { level:"prox",    label:`En ${d}d`, days:d };
-  return { level:"ok", label:`En ${d}d`, days:d };
-}
 function openMaps(addr) { window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}&travelmode=driving`,"_blank"); }
 function sendEmail({to,subject,body}) { window.open(`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,"_blank"); }
 
