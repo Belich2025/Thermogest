@@ -3117,7 +3117,7 @@ function PresupuestoDetalle({ pres:initP, data, user, refresh, empresa, onClose 
   const s  = PS[p.status];
 
   const updEdit = (k,v) => setEditForm(prev=>({...prev,[k]:v}));
-  function updLinea(i,k,v){ const ls=[...editForm.lineas]; ls[i]={...ls[i],[k]:v}; updEdit("lineas",ls); }
+  function updLinea(i,k,v){ setEditForm(prev=>{ const ls=[...prev.lineas]; ls[i]={...ls[i],[k]:v}; return {...prev,lineas:ls}; }); }
   function addLinea(){ updEdit("lineas",[...editForm.lineas,{concepto:"",cantidad:1,precio:0}]); }
   function removeLinea(i){ if(editForm.lineas.length===1) return; updEdit("lineas",editForm.lineas.filter((_,j)=>j!==i)); }
 
