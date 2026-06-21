@@ -1,3 +1,5 @@
+import { getTextColor } from "../utils/color.js";
+
 export async function generarPresupuestoPDF(pres, cliente, empresa={}) {
   try {
     const JsPDF = await (async()=>{
@@ -7,20 +9,54 @@ export async function generarPresupuestoPDF(pres, cliente, empresa={}) {
     const doc = new JsPDF({unit:"mm",format:"a4"});
     const corp = empresa.color_corporativo||"#1d4ed8";
     const hr = h=>{ const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16); return [r,g,b]; };
-    const [O,W,D,G,L] = [hr(corp),[255,255,255],[15,23,42],[100,116,139],[248,250,252]];
+    const [O,D,G,L] = [hr(corp),[15,23,42],[100,116,139],[248,250,252]];
+    const W = getTextColor(empresa.color_corporativo || '#1d4ed8');
     const PW=210, M=14;
     let y=0;
 
     // ── Cabecera ────────────────────────────────────────────────────────────
-    doc.setFillColor(...O); doc.rect(0,0,PW,42,"F");
-
-    // Nombre empresa
-    doc.setFont("helvetica","bold"); doc.setFontSize(20); doc.setTextColor(...W);
-    doc.text((empresa.nombre||"BLCH").toUpperCase(), M, 16);
-
-    // Subtítulo empresa
-    const sub = [empresa.telefono, empresa.email, empresa.web].filter(Boolean).join(" · ");
-    if(sub){ doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(255,255,255); doc.text(sub, M, 23); }
+    doc.setFillColor(...O); doc.rect(0,0,PW,36,"F");
+    if(empresa.logo_url) {
+      try {
+        const logoImg = await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = empresa.logo_url;
+        });
+        const canvas = document.createElement("canvas");
+        canvas.width = logoImg.naturalWidth;
+        canvas.height = logoImg.naturalHeight;
+        canvas.getContext("2d").drawImage(logoImg, 0, 0);
+        const logoData = canvas.toDataURL("image/png");
+        const maxW = 22, maxH = 16;
+        const ratio = Math.min(maxW/logoImg.naturalWidth*3.7795, maxH/logoImg.naturalHeight*3.7795);
+        const lw = (logoImg.naturalWidth * ratio)/3.7795;
+        const lh = (logoImg.naturalHeight * ratio)/3.7795;
+        doc.addImage(logoData, "PNG", 12, 6, lw, lh);
+        doc.setTextColor(...W); doc.setFontSize(8); doc.setFont("helvetica","bold");
+        doc.text(empresa.nombre||"BLCH", 12, 6+lh+4);
+        doc.setFontSize(7); doc.setFont("helvetica","normal");
+        if(empresa.cif)      doc.text("CIF: "+empresa.cif,12,6+lh+9);
+        if(empresa.telefono) doc.text("Tel: "+empresa.telefono+(empresa.email?" · "+empresa.email:""),12,6+lh+14);
+        if(empresa.direccion)doc.text(empresa.direccion,12,6+lh+19);
+      } catch(e) {
+        doc.setTextColor(...W); doc.setFontSize(14); doc.setFont("helvetica","bold");
+        doc.text(empresa.nombre||"BLCH", 12, 13);
+        doc.setFontSize(8); doc.setFont("helvetica","normal");
+        if(empresa.cif)      doc.text("CIF: "+empresa.cif,12,20);
+        if(empresa.telefono) doc.text("Tel: "+empresa.telefono+(empresa.email?" · "+empresa.email:""),12,27);
+        if(empresa.direccion)doc.text(empresa.direccion,12,33);
+      }
+    } else {
+      doc.setTextColor(...W); doc.setFontSize(14); doc.setFont("helvetica","bold");
+      doc.text(empresa.nombre||"BLCH", 12, 13);
+      doc.setFontSize(8); doc.setFont("helvetica","normal");
+      if(empresa.cif)      doc.text("CIF: "+empresa.cif,12,20);
+      if(empresa.telefono) doc.text("Tel: "+empresa.telefono+(empresa.email?" · "+empresa.email:""),12,27);
+      if(empresa.direccion)doc.text(empresa.direccion,12,33);
+    }
 
     // Número presupuesto + fecha (arriba derecha)
     const numStr = pres.num_presupuesto ? `PRESUPUESTO Nº ${pres.num_presupuesto}` : `PRESUPUESTO #${pres.id}`;
@@ -30,7 +66,7 @@ export async function generarPresupuestoPDF(pres, cliente, empresa={}) {
     doc.setFont("helvetica","normal"); doc.setFontSize(9);
     doc.text(fechaStr, PW-M, 23, {align:"right"});
 
-    y=42;
+    y=36;
 
     // ── Sección cliente ─────────────────────────────────────────────────────
     y+=8;
