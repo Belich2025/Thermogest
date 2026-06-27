@@ -12,18 +12,8 @@ import { EQ, RITE_CHECKLIST, TIPO_EQUIPO_OPTIONS } from "./constants/equipment.j
 import { generarResumenObraPDF } from "./pdf/obraPDF.js";
 import { generarPresupuestoPDF } from "./pdf/presupuestoPDF.js";
 import { generarPartePDF } from "./pdf/partePDF.js";
+import { sendPushNotification } from "./push.js";
 
-async function sendPushNotification(profiles, title, body, role) {
-  const targets = (profiles||[]).filter(p=>
-    (role==null||p.role===role) && p.fcm_token && p.activo!==false
-  );
-  const tokensUnicos = [...new Set(targets.map(p=>p.fcm_token))];
-  console.log("Enviando", tokensUnicos.length, "notificaciones");
-  await Promise.all(tokensUnicos.map(token=>
-    supabase.functions.invoke("send-notification", { body:{ token, title, body } })
-      .catch(e=>console.error("FCM push error:", e))
-  ));
-}
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
 /* ─── THEME ──────────────────────────────────────────────────────────────── */
