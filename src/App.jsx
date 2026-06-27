@@ -16,6 +16,7 @@ import { sendPushNotification } from "./push.js";
 import { T_LIGHT, T_DARK, useTheme } from "./ThemeContext.jsx";
 import Badge from "./components/ui/Badge.jsx";
 import BadgeProg from "./components/ui/BadgeProg.jsx";
+import Field from "./components/ui/Field.jsx";
 
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
@@ -80,9 +81,6 @@ function Ava({ name="?", size=32, color }) {
 function Btn({ ch, onClick, v="p", sm, disabled, full }) {
   const styles={p:{background:T.accent,color:"#fff",border:"none"},g:{background:T.card,color:T.sub,border:`1.5px solid ${T.border}`},d:{background:T.redLight,color:T.red,border:`1.5px solid ${T.red}40`},s:{background:T.greenLight,color:T.green,border:`1.5px solid ${T.green}40`},b:{background:T.accentLight,color:T.accent,border:`1.5px solid ${T.accent}40`}};
   return <button onClick={onClick} disabled={disabled} style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6,padding:sm?"5px 13px":"9px 18px",width:full?"100%":undefined,fontSize:sm?12:13,fontWeight:600,borderRadius:8,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.45:1,fontFamily:"'DM Sans',sans-serif",...(styles[v]||styles.p) }}>{ch}</button>;
-}
-function Field({ label, children }) {
-  return <div style={{ display:"flex",flexDirection:"column",gap:6 }}><label style={{ fontSize:11,fontWeight:600,color:T.sub }}>{label}</label>{children}</div>;
 }
 function Modal({ onClose, children, w=660, zIndex=200 }) {
   const isMobile=useIsMobile();
