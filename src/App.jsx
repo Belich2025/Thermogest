@@ -17,6 +17,7 @@ import { T_LIGHT, T_DARK, useTheme } from "./ThemeContext.jsx";
 import Badge from "./components/ui/Badge.jsx";
 import BadgeProg from "./components/ui/BadgeProg.jsx";
 import Field from "./components/ui/Field.jsx";
+import MHead from "./components/ui/MHead.jsx";
 
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
@@ -85,9 +86,6 @@ function Btn({ ch, onClick, v="p", sm, disabled, full }) {
 function Modal({ onClose, children, w=660, zIndex=200 }) {
   const isMobile=useIsMobile();
   return <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{ position:"fixed",inset:0,zIndex,background:"rgba(15,23,42,0.45)",backdropFilter:"blur(6px)",display:"flex",alignItems:isMobile?"flex-end":"center",justifyContent:"center",padding:isMobile?0:16 }}><div style={{ width:"100%",maxWidth:w,maxHeight:"92vh",overflowY:"auto",borderRadius:isMobile?"16px 16px 0 0":"14px",background:T.card,border:`1px solid ${T.border}`,boxShadow:"0 20px 60px rgba(0,0,0,0.15)",paddingBottom:isMobile?80:20 }}>{children}</div></div>;
-}
-function MHead({ title, sub, onClose }) {
-  return <div style={{ padding:"16px 18px 14px",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexShrink:0 }}><div><h2 style={{ margin:0,fontSize:16,fontWeight:700,color:T.text,fontFamily:"'Sora',sans-serif" }}>{title}</h2>{sub&&<p style={{ margin:"3px 0 0",fontSize:12,color:T.muted }}>{sub}</p>}</div><button onClick={onClose} style={{ background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:20,flexShrink:0 }}>×</button></div>;
 }
 class ErrorBoundary extends React.Component {
   constructor(p){ super(p); this.state={err:null}; }
