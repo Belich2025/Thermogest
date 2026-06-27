@@ -21,6 +21,7 @@ import MHead from "./components/ui/MHead.jsx";
 import Modal from "./components/ui/Modal.jsx";
 import Ava from "./components/ui/Ava.jsx";
 import Btn from "./components/ui/Btn.jsx";
+import ErrorBoundary from "./components/ui/ErrorBoundary.jsx";
 
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
@@ -77,11 +78,6 @@ const inp = (x={}) => ({
 
 /* ─── ATOMS ──────────────────────────────────────────────────────────────── */
 
-class ErrorBoundary extends React.Component {
-  constructor(p){ super(p); this.state={err:null}; }
-  static getDerivedStateFromError(e){ return {err:e}; }
-  render(){ if(this.state.err) return <div style={{ padding:24,background:T.redLight,border:"1px solid #fecaca",borderRadius:12,margin:20 }}><div style={{ fontWeight:700,color:T.red,marginBottom:8 }}>Error en el componente</div><pre style={{ fontSize:11,color:T.red,whiteSpace:"pre-wrap" }}>{String(this.state.err)}</pre></div>; return this.props.children; }
-}
 
 function FormularioView({ data, empresa }) {
   const [query, setQuery] = useState("");
