@@ -60,7 +60,7 @@ export async function generarPresupuestoPDF(pres, cliente, empresa={}) {
 
     // Número presupuesto + fecha (arriba derecha)
     const numStr = pres.num_presupuesto ? `PRESUPUESTO Nº ${pres.num_presupuesto}` : `PRESUPUESTO #${pres.id}`;
-    const fechaStr = pres.created_at ? new Date(pres.created_at).toLocaleDateString("es-ES",{day:"2-digit",month:"long",year:"numeric"}) : new Date().toLocaleDateString("es-ES",{day:"2-digit",month:"long",year:"numeric"});
+    const fechaStr = new Date(pres.updated_at||pres.created_at||Date.now()).toLocaleDateString("es-ES",{day:"2-digit",month:"long",year:"numeric"});
     doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...W);
     doc.text(numStr, PW-M, 16, {align:"right"});
     doc.setFont("helvetica","normal"); doc.setFontSize(9);
@@ -84,15 +84,31 @@ export async function generarPresupuestoPDF(pres, cliente, empresa={}) {
     y+=36;
 
     // ── Descripción del trabajo ─────────────────────────────────────────────
-    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...O);
-    doc.text("DESCRIPCIÓN DEL TRABAJO", M, y);
-    doc.setDrawColor(...O); doc.setLineWidth(0.5); doc.line(M,y+2,PW-M,y+2);
-    y+=7;
+    doc.setFillColor(...O); doc.rect(M,y,PW-M*2,7,"F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...W);
+    doc.text("DESCRIPCIÓN DEL TRABAJO", M+4, y+5); y+=10;
 
     doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(...D);
     const descLines = doc.splitTextToSize(pres.descripcion||"Sin descripción.", PW-M*2);
     descLines.forEach(line=>{ doc.text(line,M,y); y+=5.5; });
     y+=4;
+
+    // ── Conceptos del presupuesto ───────────────────────────────────────────
+    const lineas = (pres.lineas||[]).filter(l=>l.concepto?.trim());
+    if(lineas.length > 0){
+      doc.setFillColor(...O); doc.rect(M,y,PW-M*2,7,"F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...W);
+      doc.text("CONCEPTOS DEL PRESUPUESTO", M+4, y+5); y+=9;
+      doc.setFont("helvetica","normal"); doc.setFontSize(9);
+      lineas.forEach((l,idx)=>{
+        if(idx%2===0){ doc.setFillColor(...L); doc.rect(M,y-1,PW-M*2,7,"F"); }
+        doc.setTextColor(...D);
+        doc.text((l.concepto||"—").slice(0,90), M+4, y+4);
+        y+=7;
+        if(y>250){ doc.addPage(); y=20; }
+      });
+      y+=4;
+    }
 
     // ── Totales ─────────────────────────────────────────────────────────────
     const aplicarIva = pres.aplicar_iva !== false;
@@ -129,10 +145,9 @@ export async function generarPresupuestoPDF(pres, cliente, empresa={}) {
 
     // ── Condiciones / Notas ─────────────────────────────────────────────────
     if(pres.notas && pres.notas.trim()){
-      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...O);
-      doc.text("CONDICIONES Y NOTAS", M, y);
-      doc.setDrawColor(...O); doc.setLineWidth(0.5); doc.line(M,y+2,PW-M,y+2);
-      y+=7;
+      doc.setFillColor(...O); doc.rect(M,y,PW-M*2,7,"F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...W);
+      doc.text("CONDICIONES Y NOTAS", M+4, y+5); y+=10;
       doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...G);
       const notaLines = doc.splitTextToSize(pres.notas.trim(), PW-M*2);
       notaLines.forEach(line=>{ doc.text(line,M,y); y+=5; });

@@ -3135,22 +3135,26 @@ function PresupuestoDetalle({ pres:initP, data, user, refresh, empresa, onClose 
   }
 
   async function guardarEdicion() {
+    const now = new Date().toISOString();
     const {error}=await supabase.from("presupuestos").update({
       descripcion:editForm.descripcion, notas:editForm.notas||null,
       lineas:editForm.lineas, aplicar_iva:editForm.aplicar_iva, importe:editTotal,
+      updated_at:now,
     }).eq("id",p.id);
-    if(!error){ setP(prev=>({...prev,...editForm,importe:editTotal})); setEditMode(false); refresh?.(); }
+    if(!error){ setP(prev=>({...prev,...editForm,importe:editTotal,updated_at:now})); setEditMode(false); refresh?.(); }
     else alert("Error: "+error.message);
   }
 
   async function guardarYPDF() {
+    const now = new Date().toISOString();
     const {error}=await supabase.from("presupuestos").update({
       descripcion:editForm.descripcion, notas:editForm.notas||null,
       lineas:editForm.lineas, aplicar_iva:editForm.aplicar_iva, importe:editTotal,
+      updated_at:now,
     }).eq("id",p.id);
     if(!error){
-      const updated={...p,...editForm,importe:editTotal};
-      setP(prev=>({...prev,...editForm,importe:editTotal}));
+      const updated={...p,...editForm,importe:editTotal,updated_at:now};
+      setP(prev=>({...prev,...editForm,importe:editTotal,updated_at:now}));
       setEditMode(false);
       refresh?.();
       generarPresupuestoPDF(updated,cl,empresa);
