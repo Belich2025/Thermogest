@@ -14,6 +14,7 @@ import { generarPresupuestoPDF } from "./pdf/presupuestoPDF.js";
 import { generarPartePDF } from "./pdf/partePDF.js";
 import { sendPushNotification } from "./push.js";
 import { T_LIGHT, T_DARK, useTheme } from "./ThemeContext.jsx";
+import Badge from "./components/ui/Badge.jsx";
 
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
@@ -69,10 +70,6 @@ const inp = (x={}) => ({
 });
 
 /* ─── ATOMS ──────────────────────────────────────────────────────────────── */
-function Badge({ status, type="b" }) {
-  const s=(type==="b"?BS:PS)[status]||{label:status,color:T.muted};
-  return <span style={{ display:"inline-flex",alignItems:"center",gap:4,padding:"2px 10px",borderRadius:6,fontSize:11,fontWeight:600,background:s.color+"14",border:`1px solid ${s.color}28`,color:s.color,whiteSpace:"nowrap" }}><span style={{ width:5,height:5,borderRadius:"50%",background:s.color }}/>{s.label}</span>;
-}
 function BadgeProg({ fecha }) {
   if(!fecha) return null;
   const dd = fecha.slice(8,10)+"/"+fecha.slice(5,7);
