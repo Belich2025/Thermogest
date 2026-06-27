@@ -18,6 +18,7 @@ import Badge from "./components/ui/Badge.jsx";
 import BadgeProg from "./components/ui/BadgeProg.jsx";
 import Field from "./components/ui/Field.jsx";
 import MHead from "./components/ui/MHead.jsx";
+import Modal from "./components/ui/Modal.jsx";
 
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
@@ -82,10 +83,6 @@ function Ava({ name="?", size=32, color }) {
 function Btn({ ch, onClick, v="p", sm, disabled, full }) {
   const styles={p:{background:T.accent,color:"#fff",border:"none"},g:{background:T.card,color:T.sub,border:`1.5px solid ${T.border}`},d:{background:T.redLight,color:T.red,border:`1.5px solid ${T.red}40`},s:{background:T.greenLight,color:T.green,border:`1.5px solid ${T.green}40`},b:{background:T.accentLight,color:T.accent,border:`1.5px solid ${T.accent}40`}};
   return <button onClick={onClick} disabled={disabled} style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6,padding:sm?"5px 13px":"9px 18px",width:full?"100%":undefined,fontSize:sm?12:13,fontWeight:600,borderRadius:8,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.45:1,fontFamily:"'DM Sans',sans-serif",...(styles[v]||styles.p) }}>{ch}</button>;
-}
-function Modal({ onClose, children, w=660, zIndex=200 }) {
-  const isMobile=useIsMobile();
-  return <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{ position:"fixed",inset:0,zIndex,background:"rgba(15,23,42,0.45)",backdropFilter:"blur(6px)",display:"flex",alignItems:isMobile?"flex-end":"center",justifyContent:"center",padding:isMobile?0:16 }}><div style={{ width:"100%",maxWidth:w,maxHeight:"92vh",overflowY:"auto",borderRadius:isMobile?"16px 16px 0 0":"14px",background:T.card,border:`1px solid ${T.border}`,boxShadow:"0 20px 60px rgba(0,0,0,0.15)",paddingBottom:isMobile?80:20 }}>{children}</div></div>;
 }
 class ErrorBoundary extends React.Component {
   constructor(p){ super(p); this.state={err:null}; }
