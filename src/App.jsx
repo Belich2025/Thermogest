@@ -13,30 +13,11 @@ import { generarResumenObraPDF } from "./pdf/obraPDF.js";
 import { generarPresupuestoPDF } from "./pdf/presupuestoPDF.js";
 import { generarPartePDF } from "./pdf/partePDF.js";
 import { sendPushNotification } from "./push.js";
+import { T_LIGHT, T_DARK, useTheme } from "./ThemeContext.jsx";
 
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
 /* ─── THEME ──────────────────────────────────────────────────────────────── */
-const T_LIGHT = {
-  bg:"#f8fafc", card:"#ffffff", surface:"#f1f5f9",
-  border:"#e2e8f0", accent:"#1d4ed8", accentLight:"#dbeafe",
-  green:"#16a34a", greenLight:"#dcfce7",
-  red:"#dc2626", redLight:"#fee2e2",
-  orange:"#d97706", orangeLight:"#fff7ed", teal:"#0d9488", tealLight:"#f0fdfa",
-  purple:"#7c3aed", purpleLight:"#f5f3ff",
-  text:"#0f172a", sub:"#475569", muted:"#94a3b8",
-  input:"#ffffff",
-};
-const T_DARK = {
-  bg:"#0a0a0a", card:"#111111", surface:"#1a1a1a",
-  border:"#3a3a3a", accent:"#3b82f6", accentLight:"#1a2e4a",
-  green:"#a0a0a0", greenLight:"#1a1a1a",
-  red:"#ef4444", redLight:"#2d0a0a",
-  orange:"#f97316", orangeLight:"#2d1a0080", teal:"#14b8a6", tealLight:"#134e4a",
-  purple:"#a78bfa", purpleLight:"#2e1065",
-  text:"#f0f0f0", sub:"#aaaaaa", muted:"#666666",
-  input:"#1a1a1a",
-};
 let T = T_LIGHT;
 let _setTooltip = ()=>{};
 const SunIcon  = ()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="6.34" y1="17.66" x2="4.93" y2="19.07"/><line x1="19.07" y1="4.93" x2="17.66" y2="6.34"/></svg>;
@@ -77,7 +58,7 @@ let BS = mkBS(SC_LIGHT);
 let MS = mkMS(SC_LIGHT);
 let PS = mkPS(SC_LIGHT);
 
-const UCOL = { urgente:T.red, hoy:T.orange, semana:"#f59e0b", prox:T.teal, ok:T.muted, none:T.muted };
+let UCOL = { urgente:T.red, hoy:T.orange, semana:"#f59e0b", prox:T.teal, ok:T.muted, none:T.muted };
 /* ─── VOICE SIMPLE ──────────────────────────────────────────────────────── */
 /* ─── HELPERS ────────────────────────────────────────────────────────────── */
 const inp = (x={}) => ({
@@ -7767,7 +7748,7 @@ export default function App() {
   const [selectedInstalacion, setSelectedInstalacion] = useState(null);
   const [selectedMant, setSelectedMant] = useState(null);
   const [isOnline, setIsOnline]     = useState(navigator.onLine);
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("blch-darkmode") === "true");
+  const { darkMode, setDarkMode, T: themeT, BS: themeBS, MS: themeMS, PS: themePS } = useTheme();
   const isMobile = useIsMobile();
   const isAdmin  = user?.role === "admin";
   const [showSearch, setShowSearch] = useState(false);
@@ -7777,22 +7758,18 @@ export default function App() {
   const [searchVoiceActive, setSearchVoiceActive] = useState(false);
   const [tooltipActivo, setTooltipActivo] = useState(null);
   _setTooltip = setTooltipActivo;
-  T = darkMode ? T_DARK : T_LIGHT;
+  T = themeT;
   let SC = darkMode ? SC_DARK : SC_LIGHT;
-  BS = mkBS(SC);
-  MS = mkMS(SC);
-  PS = mkPS(SC);
+  BS = themeBS;
+  MS = themeMS;
+  PS = themePS;
   OB_ESTADOS = mkOB_ESTADOS(SC);
+  UCOL = { urgente:themeT.red, hoy:themeT.orange, semana:"#f59e0b", prox:themeT.teal, ok:themeT.muted, none:themeT.muted };
 
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>{ if(session) loadUser(session.user.id); });
     supabase.auth.onAuthStateChange((_,session)=>{ if(session) loadUser(session.user.id); else setUser(null); });
   },[]);
-
-  useEffect(()=>{
-    localStorage.setItem("blch-darkmode", darkMode);
-    document.body.style.background = darkMode ? "#0a0a0a" : "#f8fafc";
-  },[darkMode]);
 
   // ── Tiempo real
   useEffect(()=>{
