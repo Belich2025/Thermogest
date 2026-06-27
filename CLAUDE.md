@@ -2,6 +2,33 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Working rules (read before any change)
+
+### Mandatory workflow
+1. Diagnose before touching anything. Inspect the real code/state first.
+2. Verify real column/table names in Supabase before assuming them. Never guess schema.
+3. Make small, surgical edits — never broad rewrites.
+4. Test locally: `npm run dev` → localhost:5173.
+5. Push to the `modo-oscuro` branch (development), never directly to `main`.
+6. Merge to `main` (production, auto-deploys to Vercel) only after local verification.
+7. Verify in production after deploy.
+
+### Security — never violate
+- NEVER use the Supabase `service_role` key in database triggers or in browser-side code. It belongs only in Vercel serverless functions (`api/`) via `SUPABASE_SERVICE_KEY`.
+- App config needed by triggers lives in the protected `_app_config` table, read via the `get_app_config()` SECURITY DEFINER function — never inline the key.
+- Mask any keys, tokens, or secrets before showing them in output.
+- Private `pdfs` bucket is served via signed URLs only. Do not make it public.
+- Edge Functions deploy separately: `npx supabase functions deploy [name]`. They are NOT deployed by the Vercel push.
+
+### Domain vocabulary (HVAC) — critical distinction
+- `averias` = breakdown/repair jobs (avisos).
+- `mantenimientos` = ONE-OFF sporadic maintenance, attached to averías.
+- `contratos` = PERIODIC recurring maintenance, attached to `instalaciones`.
+- **NEVER confuse `mantenimientos` with `contratos`.** They are different concepts on different tables. This distinction is core to the product.
+
+### App.jsx
+App.jsx is a ~8,784-line monolith under active phased refactor. Do NOT rewrite it wholesale. Do not load the entire file into context when a targeted section will do. Extracted modules already live in organized subdirectories (utils, hooks, constants, PDF generators).
+
 ## Commands
 
 ```bash
