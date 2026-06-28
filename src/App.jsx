@@ -6976,7 +6976,7 @@ export default function App() {
   const [selectedInstalacion, setSelectedInstalacion] = useState(null);
   const [selectedMant, setSelectedMant] = useState(null);
   const [isOnline, setIsOnline]     = useState(navigator.onLine);
-  const { darkMode, setDarkMode, T: themeT, BS: themeBS, MS: themeMS, PS: themePS } = useTheme();
+  const { darkMode, setDarkMode, T: themeT, BS: themeBS, MS: themeMS, PS: themePS, UCOL: themeUCOL } = useTheme();
   const isMobile = useIsMobile();
   const isAdmin  = user?.role === "admin";
   const [showSearch, setShowSearch] = useState(false);
@@ -6992,7 +6992,7 @@ export default function App() {
   MS = themeMS;
   PS = themePS;
   OB_ESTADOS = mkOB_ESTADOS(SC);
-  UCOL = { urgente:themeT.red, hoy:themeT.orange, semana:"#f59e0b", prox:themeT.teal, ok:themeT.muted, none:themeT.muted };
+  UCOL = themeUCOL;
 
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>{ if(session) loadUser(session.user.id); });

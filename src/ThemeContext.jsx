@@ -43,6 +43,7 @@ export function ThemeProvider({ children }) {
       darkMode, setDarkMode,
       T, SC,
       BS: mkBS(SC), MS: mkMS(SC), PS: mkPS(SC),
+      UCOL: { urgente:T.red, hoy:T.orange, semana:"#f59e0b", prox:T.teal, ok:T.muted, none:T.muted },
     };
   }, [darkMode]);
 
