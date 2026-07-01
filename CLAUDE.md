@@ -75,7 +75,7 @@ This file is very large (~325 KB) and contains the entire admin interface as a s
 
 - **Login screen** — email/password auth via `supabase.auth.signInWithPassword`; profile fetched from `profiles` table (role: `admin` | `tecnico`)
 - **Sidebar** — role-aware navigation; admin sees all sections, tecnico sees a subset
-- **Views** rendered by a `view` state string: `dashboard`, `averias`, `mantenimientos_sec`, `instalaciones_obras`, `contratos`, `presupuestos`, `clientes`, `usuarios`, `empresa`, `calendario`, `fichajes`
+- **Views** rendered by a `view` state string: `dashboard`, `calendario`, `avisos` (averías + mantenimientos as tabs), `instalaciones_obras`, `presupuestos`, `contratos`, `fichajes`, `clientes`, `formulario`, `usuarios`, `empresa`
 
 ### Supabase Tables (key ones)
 
