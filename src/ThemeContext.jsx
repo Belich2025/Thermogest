@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useMemo } from "react";
-import { SC_LIGHT, SC_DARK, mkBS, mkMS, mkPS } from "./constants/status.js";
+import { SC_LIGHT, SC_DARK, mkBS, mkMS, mkPS, mkOB_ESTADOS } from "./constants/status.js";
 
 const T_LIGHT = {
   bg:"#f8fafc", card:"#ffffff", surface:"#f1f5f9",
@@ -42,7 +42,7 @@ export function ThemeProvider({ children }) {
     return {
       darkMode, setDarkMode,
       T, SC,
-      BS: mkBS(SC), MS: mkMS(SC), PS: mkPS(SC),
+      BS: mkBS(SC), MS: mkMS(SC), PS: mkPS(SC), OB_ESTADOS: mkOB_ESTADOS(SC),
       UCOL: { urgente:T.red, hoy:T.orange, semana:"#f59e0b", prox:T.teal, ok:T.muted, none:T.muted },
     };
   }, [darkMode]);

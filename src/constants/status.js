@@ -63,6 +63,14 @@ export const mkPS = SC => ({
   rechazado: { label:"Rechazado", color:SC.rechazado },
 });
 
+export const mkOB_ESTADOS = SC => ({
+  pendiente:           { label:"Pendiente",         color:SC.pendiente },
+  en_curso:            { label:"En curso",          color:SC.en_curso },
+  completada:          { label:"Completada",        color:SC.completada },
+  pendiente_facturar:  { label:"Pend. facturar",    color:SC.pendiente_facturar },
+  facturada:           { label:"Facturada",         color:SC.facturada },
+});
+
 export const BS_ACTIVOS = ["nueva","en_reparacion","pendiente_piezas","presupuesto_enviado","cerrada"];
 export const BS_ALL     = ["nueva","en_reparacion","pendiente_piezas","presupuesto_enviado","cerrada","pendiente_facturar","facturado"];
 export const SO_B       = { nueva:0,en_reparacion:1,pendiente_piezas:2,presupuesto_enviado:3,cerrada:4,pendiente_facturar:5,facturado:10 };

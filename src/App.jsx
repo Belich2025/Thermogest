@@ -7,7 +7,7 @@ import { openMaps, sendEmail } from "./utils/links.js";
 import { getTextColor } from "./utils/color.js";
 import { useIsMobile } from "./hooks/useIsMobile.js";
 import { startVoiceSimple } from "./hooks/useVoice.js";
-import { SC_LIGHT, SC_DARK, mkBS, mkMS, mkPS, BS_ACTIVOS, BS_ALL, SO_B, MS_ACTIVOS, SO_M, PS_ORDER, MT_TIPOS, MT } from "./constants/status.js";
+import { SC_LIGHT, mkBS, mkMS, mkPS, mkOB_ESTADOS, BS_ACTIVOS, BS_ALL, SO_B, MS_ACTIVOS, SO_M, PS_ORDER, MT_TIPOS, MT } from "./constants/status.js";
 import { EQ, RITE_CHECKLIST, TIPO_EQUIPO_OPTIONS } from "./constants/equipment.js";
 import { generarResumenObraPDF } from "./pdf/obraPDF.js";
 import { generarPresupuestoPDF } from "./pdf/presupuestoPDF.js";
@@ -4243,13 +4243,6 @@ function RevisionModal({ inst, eq, cliente, tipo, user, onSave, onClose }) {
    SECCIÓN INSTALACIONES — Trabajos de instalación nuevos
    ══════════════════════════════════════════════════════════════════════════ */
 
-const mkOB_ESTADOS = SC => ({
-  pendiente:           { label:"Pendiente",         color:SC.pendiente },
-  en_curso:            { label:"En curso",          color:SC.en_curso },
-  completada:          { label:"Completada",        color:SC.completada },
-  pendiente_facturar:  { label:"Pend. facturar",    color:SC.pendiente_facturar },
-  facturada:           { label:"Facturada",         color:SC.facturada },
-});
 let OB_ESTADOS = mkOB_ESTADOS(SC_LIGHT);
 
 function NuevaObraModal({ data, user, techs, refresh, onClose, presupuestoId }) {
@@ -5387,7 +5380,7 @@ export default function App() {
   const [selectedInstalacion, setSelectedInstalacion] = useState(null);
   const [selectedMant, setSelectedMant] = useState(null);
   const [isOnline, setIsOnline]     = useState(navigator.onLine);
-  const { darkMode, setDarkMode, T: themeT, BS: themeBS, MS: themeMS, PS: themePS, UCOL: themeUCOL } = useTheme();
+  const { darkMode, setDarkMode, T: themeT, BS: themeBS, MS: themeMS, PS: themePS, OB_ESTADOS: themeOB_ESTADOS, UCOL: themeUCOL } = useTheme();
   const isMobile = useIsMobile();
   const isAdmin  = user?.role === "admin";
   const [showSearch, setShowSearch] = useState(false);
@@ -5398,11 +5391,10 @@ export default function App() {
   const [tooltipActivo, setTooltipActivo] = useState(null);
   _setTooltip = setTooltipActivo;
   T = themeT;
-  let SC = darkMode ? SC_DARK : SC_LIGHT;
   BS = themeBS;
   MS = themeMS;
   PS = themePS;
-  OB_ESTADOS = mkOB_ESTADOS(SC);
+  OB_ESTADOS = themeOB_ESTADOS;
   UCOL = themeUCOL;
 
   useEffect(()=>{
