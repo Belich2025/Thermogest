@@ -40,31 +40,13 @@ import NuevoEquipoModal from "./components/shared/NuevoEquipoModal.jsx";
 import ObraDetalle from "./components/shared/ObraDetalle.jsx";
 import ClienteBuscadorField from "./components/shared/ClienteBuscadorField.jsx";
 import NuevaObraModal from "./components/shared/NuevaObraModal.jsx";
+import BotonNomina from "./components/shared/BotonNomina.jsx";
 
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
 /* ─── THEME ──────────────────────────────────────────────────────────────── */
 let T = T_LIGHT;
 let _setTooltip = ()=>{};
-
-function BotonNomina({ n }) {
-  const [cargando, setCargando] = React.useState(false);
-  async function abrir() {
-    setCargando(true);
-    const { data, error } = await supabase.storage.from("pdfs").createSignedUrl(n.archivo_url, 3600);
-    setCargando(false);
-    if (error) { alert("No se pudo generar el enlace: " + error.message); return; }
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
-  }
-  return (
-    <button onClick={abrir} disabled={cargando}
-      style={{ padding:"8px 16px",borderRadius:9,background:T.accentLight,border:"1.5px solid "+T.accent+"40",
-               color:T.accent,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",
-               flexShrink:0,opacity:cargando?0.6:1 }}>
-      {cargando ? "Cargando…" : "Ver / Descargar"}
-    </button>
-  );
-}
 const AIBtn = ({ch,onClick,disabled})=>(
   <button type="button" onClick={onClick} disabled={disabled}
     style={{display:"inline-flex",alignItems:"center",gap:5,padding:"6px 13px",borderRadius:8,border:"none",cursor:disabled?"not-allowed":"pointer",background:"linear-gradient(135deg,#3b82f6 0%,#7c3aed 100%)",color:"#fff",fontSize:12,fontWeight:600,fontFamily:"'DM Sans',sans-serif",opacity:disabled?0.72:1,flexShrink:0,whiteSpace:"nowrap",transition:"opacity 0.15s"}}>
