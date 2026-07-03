@@ -51,7 +51,6 @@ import ClienteSelector from "./components/shared/ClienteSelector.jsx";
 import NuevaAveriaModal from "./components/shared/NuevaAveriaModal.jsx";
 
 
-/* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
 /* ─── THEME ──────────────────────────────────────────────────────────────── */
 let T = T_LIGHT;
 let _setTooltip = ()=>{};
@@ -74,14 +73,8 @@ let MS = mkMS(SC_LIGHT);
 let PS = mkPS(SC_LIGHT);
 
 let UCOL = { urgente:T.red, hoy:T.orange, semana:"#f59e0b", prox:T.teal, ok:T.muted, none:T.muted };
-/* ─── VOICE SIMPLE ──────────────────────────────────────────────────────── */
 /* ─── HELPERS ────────────────────────────────────────────────────────────── */
 const inp = (x={}) => mkInp(T)(x);
-
-/* ─── ATOMS ──────────────────────────────────────────────────────────────── */
-
-
-/* ─── SIDEBAR ────────────────────────────────────────────────────────────── */
 
 function TooltipOnboarding({ id, titulo, descripcion, onClose }) {
   return (
@@ -109,15 +102,6 @@ function TooltipOnboarding({ id, titulo, descripcion, onClose }) {
     </div>
   );
 }
-
-/* ─── DASHBOARD ──────────────────────────────────────────────────────────── */
-
-
-/* ── Guardar contacto vCard ──────────────────────────────────────────────── */
-
-
-/* ─── CLIENTE SELECTOR ───────────────────────────────────────────────────── */
-
 
 /* ─── AVISOS ─────────────────────────────────────────────────────────────── */
 function NuevoAvisoModal({ data, user, techs, refresh, onClose }) {
@@ -1207,7 +1191,6 @@ function ClientesList({ data, refresh, user }) {
   );
 }
 
-/* ─── CALENDARIO ─────────────────────────────────────────────────────────── */
 /* ─── INST DETALLE ───────────────────────────────────────────────────────── */
 function InstDetalle({ inst, data, refresh, onClose }) {
   const isMobile = useIsMobile();
