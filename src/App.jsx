@@ -62,7 +62,6 @@ import MantenimientoView from "./components/views/MantenimientoView.jsx";
 
 /* ─── THEME ──────────────────────────────────────────────────────────────── */
 let T = T_LIGHT;
-let _setTooltip = ()=>{};
 const AIBtn = ({ch,onClick,disabled})=>(
   <button type="button" onClick={onClick} disabled={disabled}
     style={{display:"inline-flex",alignItems:"center",gap:5,padding:"6px 13px",borderRadius:8,border:"none",cursor:disabled?"not-allowed":"pointer",background:"linear-gradient(135deg,#3b82f6 0%,#7c3aed 100%)",color:"#fff",fontSize:12,fontWeight:600,fontFamily:"'DM Sans',sans-serif",opacity:disabled?0.72:1,flexShrink:0,whiteSpace:"nowrap",transition:"opacity 0.15s"}}>
@@ -161,7 +160,6 @@ export default function App() {
   const fcmRequestedRef = useRef(false);
   const [searchVoiceActive, setSearchVoiceActive] = useState(false);
   const [tooltipActivo, setTooltipActivo] = useState(null);
-  _setTooltip = setTooltipActivo;
   T = themeT;
   BS = themeBS;
   MS = themeMS;
