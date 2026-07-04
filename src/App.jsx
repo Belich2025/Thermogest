@@ -7,14 +7,13 @@ import { openMaps, sendEmail } from "./utils/links.js";
 import { getTextColor } from "./utils/color.js";
 import { useIsMobile } from "./hooks/useIsMobile.js";
 import { startVoiceSimple } from "./hooks/useVoice.js";
-import { SC_LIGHT, mkBS, mkMS, mkPS, mkOB_ESTADOS, BS_ACTIVOS, BS_ALL, SO_B, MS_ACTIVOS, SO_M, PS_ORDER, MT_TIPOS, MT } from "./constants/status.js";
+import { BS_ACTIVOS, BS_ALL, SO_B, MS_ACTIVOS, SO_M, PS_ORDER, MT_TIPOS, MT } from "./constants/status.js";
 import { EQ, RITE_CHECKLIST, TIPO_EQUIPO_OPTIONS } from "./constants/equipment.js";
 import { generarResumenObraPDF } from "./pdf/obraPDF.js";
 import { generarPresupuestoPDF } from "./pdf/presupuestoPDF.js";
 import { generarPartePDF } from "./pdf/partePDF.js";
 import { sendPushNotification } from "./push.js";
-import { T_LIGHT, T_DARK, useTheme } from "./ThemeContext.jsx";
-import { mkInp } from "./utils/styles.js";
+import { useTheme } from "./ThemeContext.jsx";
 import Badge from "./components/ui/Badge.jsx";
 import BadgeProg from "./components/ui/BadgeProg.jsx";
 import Field from "./components/ui/Field.jsx";
@@ -61,20 +60,9 @@ import MantenimientoView from "./components/views/MantenimientoView.jsx";
 import TooltipOnboarding from "./components/shared/TooltipOnboarding.jsx";
 
 
-/* ─── THEME ──────────────────────────────────────────────────────────────── */
-let T = T_LIGHT;
-
 /* ══════════════════════════════════════════════════════════════════════════
    SECCIÓN AVERÍAS — Flujo completo
    ══════════════════════════════════════════════════════════════════════════ */
-
-let BS = mkBS(SC_LIGHT);
-let MS = mkMS(SC_LIGHT);
-let PS = mkPS(SC_LIGHT);
-
-let UCOL = { urgente:T.red, hoy:T.orange, semana:"#f59e0b", prox:T.teal, ok:T.muted, none:T.muted };
-/* ─── HELPERS ────────────────────────────────────────────────────────────── */
-const inp = (x={}) => mkInp(T)(x);
 
 /* ─── TOOLTIP: TooltipOnboarding extraído a components/shared/TooltipOnboarding.jsx ─── */
 
@@ -102,8 +90,6 @@ const inp = (x={}) => mkInp(T)(x);
    SECCIÓN INSTALACIONES — Trabajos de instalación nuevos
    ══════════════════════════════════════════════════════════════════════════ */
 
-let OB_ESTADOS = mkOB_ESTADOS(SC_LIGHT);
-
 
 export default function App() {
   const [user, setUser]         = useState(null);
@@ -118,7 +104,7 @@ export default function App() {
   const [selectedInstalacion, setSelectedInstalacion] = useState(null);
   const [selectedMant, setSelectedMant] = useState(null);
   const [isOnline, setIsOnline]     = useState(navigator.onLine);
-  const { darkMode, setDarkMode, T: themeT, BS: themeBS, MS: themeMS, PS: themePS, OB_ESTADOS: themeOB_ESTADOS, UCOL: themeUCOL } = useTheme();
+  const { T } = useTheme();
   const isMobile = useIsMobile();
   const isAdmin  = user?.role === "admin";
   const [showSearch, setShowSearch] = useState(false);
@@ -127,12 +113,6 @@ export default function App() {
   const fcmRequestedRef = useRef(false);
   const [searchVoiceActive, setSearchVoiceActive] = useState(false);
   const [tooltipActivo, setTooltipActivo] = useState(null);
-  T = themeT;
-  BS = themeBS;
-  MS = themeMS;
-  PS = themePS;
-  OB_ESTADOS = themeOB_ESTADOS;
-  UCOL = themeUCOL;
 
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>{ if(session) loadUser(session.user.id); });
