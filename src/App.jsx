@@ -1,6 +1,5 @@
 ﻿import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from "react";
 import { supabase } from "./supabase.js";
-import { requestNotificationPermission } from "./firebase.js";
 import { todayStr, addDays, urgInfo } from "./utils/dates.js";
 import { openMaps, sendEmail } from "./utils/links.js";
 import { getTextColor } from "./utils/color.js";
@@ -151,6 +150,7 @@ export default function App() {
       loadAll();
       if (!fcmRequestedRef.current) {
       fcmRequestedRef.current = true;
+      const { requestNotificationPermission } = await import("./firebase.js");
       const fcmToken = await requestNotificationPermission();
       console.log("5. Token FCM obtenido:", fcmToken ? fcmToken.slice(0,20)+"..." : "null");
       if(fcmToken) {
