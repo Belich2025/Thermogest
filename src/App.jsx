@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useCallback } from "react";
+﻿import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from "react";
 import { supabase } from "./supabase.js";
 import { requestNotificationPermission } from "./firebase.js";
 import { detectarAveria, mejorarDescripcion, detectarMateriales, asistirPresupuesto, generarParteCompleto, generarPresupuestoCompleto, generarLineasPresupuesto } from "./ai.js";
@@ -22,13 +22,14 @@ import Modal from "./components/ui/Modal.jsx";
 import Ava from "./components/ui/Ava.jsx";
 import Btn from "./components/ui/Btn.jsx";
 import ErrorBoundary from "./components/ui/ErrorBoundary.jsx";
+import ChunkErrorBoundary from "./components/ui/ChunkErrorBoundary.jsx";
 import Login from "./components/views/Login.jsx";
 import Sidebar from "./components/views/Sidebar.jsx";
 import CatalogoMaterialesView from "./components/views/CatalogoMaterialesView.jsx";
 import EmpresaConfig from "./components/views/EmpresaConfig.jsx";
 import UsuariosView from "./components/views/UsuariosView.jsx";
 import InstalacionesObrasView from "./components/views/InstalacionesObrasView.jsx";
-import FichajesView from "./components/views/FichajesView.jsx";
+const FichajesView = lazy(() => import("./components/views/FichajesView.jsx"));
 import FormularioView from "./components/views/FormularioView.jsx";
 import DashboardView from "./components/views/DashboardView.jsx";
 import CalendarView from "./components/views/CalendarView.jsx";
@@ -291,17 +292,21 @@ export default function App() {
         {!isOnline&&<div style={{position:"fixed",top:0,left:0,right:0,zIndex:9999,background:"#f97316",color:"#fff",textAlign:"center",padding:"8px 16px",fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif"}}>Sin conexión — los cambios no se guardarán</div>}
         <Sidebar user={user} view={view} setView={v=>{setView(v);if(isMobile)setSideOpen(false);}} onLogout={handleLogout} data={data} open={sideOpen} onToggle={()=>setSideOpen(p=>!p)} onClose={()=>setSideOpen(false)}/>
         <div style={{ flex:1, minWidth:0, paddingTop:isMobile?52:0, paddingBottom:isMobile?70:0, overflowY:"auto", minHeight:"100vh" }}>
-          {view==="dashboard" &&isAdmin&&<DashboardView data={data} setView={setView} techs={techs}/>}
-          {view==="calendario" &&<CalendarView data={data} refresh={loadAll} user={user}/>}
-          {view==="avisos" &&<AvisosView data={data} user={user} onSelect={setSelected} onSelectMant={setSelectedMant} techs={techs} refresh={loadAll} onTooltip={setTooltipActivo}/>}
-          {view==="presupuestos" &&<PresupuestosList data={data} refresh={loadAll} user={user} empresa={empresa} onTooltip={setTooltipActivo}/>}
-          {view==="clientes" &&isAdmin&&<ClientesList data={data} refresh={loadAll} user={user} onTooltip={setTooltipActivo}/>}
-          {view==="formulario" &&isAdmin&&<FormularioView data={data} empresa={empresa}/>}
-          {view==="contratos" &&<MantenimientoView data={data} user={user} refresh={loadAll} empresa={empresa} onTooltip={setTooltipActivo}/>}
-          {view==="empresa" &&isAdmin&&<EmpresaConfig empresa={empresa} setEmpresa={setEmpresa}/>}
-          {view==="usuarios" &&isAdmin&&<UsuariosView techs={techs} refresh={loadAll} user={user} onTooltip={setTooltipActivo}/>}
-          {view==="fichajes" &&<FichajesView data={data} user={user} refresh={loadAll} empresa={empresa}/>}
-          {view==="instalaciones_obras"&&<InstalacionesObrasView data={data} user={user} techs={techs} refresh={loadAll} empresa={empresa} onTooltip={setTooltipActivo}/>}
+          <ChunkErrorBoundary>
+            <Suspense fallback={<div style={{ padding:40, textAlign:"center", color:T.muted, fontSize:14, fontFamily:"'DM Sans',sans-serif" }}>Cargando…</div>}>
+              {view==="dashboard" &&isAdmin&&<DashboardView data={data} setView={setView} techs={techs}/>}
+              {view==="calendario" &&<CalendarView data={data} refresh={loadAll} user={user}/>}
+              {view==="avisos" &&<AvisosView data={data} user={user} onSelect={setSelected} onSelectMant={setSelectedMant} techs={techs} refresh={loadAll} onTooltip={setTooltipActivo}/>}
+              {view==="presupuestos" &&<PresupuestosList data={data} refresh={loadAll} user={user} empresa={empresa} onTooltip={setTooltipActivo}/>}
+              {view==="clientes" &&isAdmin&&<ClientesList data={data} refresh={loadAll} user={user} onTooltip={setTooltipActivo}/>}
+              {view==="formulario" &&isAdmin&&<FormularioView data={data} empresa={empresa}/>}
+              {view==="contratos" &&<MantenimientoView data={data} user={user} refresh={loadAll} empresa={empresa} onTooltip={setTooltipActivo}/>}
+              {view==="empresa" &&isAdmin&&<EmpresaConfig empresa={empresa} setEmpresa={setEmpresa}/>}
+              {view==="usuarios" &&isAdmin&&<UsuariosView techs={techs} refresh={loadAll} user={user} onTooltip={setTooltipActivo}/>}
+              {view==="fichajes" &&<FichajesView data={data} user={user} refresh={loadAll} empresa={empresa}/>}
+              {view==="instalaciones_obras"&&<InstalacionesObrasView data={data} user={user} techs={techs} refresh={loadAll} empresa={empresa} onTooltip={setTooltipActivo}/>}
+            </Suspense>
+          </ChunkErrorBoundary>
         </div>
         {selected&&<AveriaDetalle averia={selected} data={data} user={user} techs={techs} empresa={empresa} refresh={loadAll} onClose={()=>setSelected(null)}/>}
         {selectedCliente&&<ClienteDetalle cliente={selectedCliente} data={data} refresh={loadAll} onClose={()=>setSelectedCliente(null)} onSelectAveria={a=>{setSelectedCliente(null);setTimeout(()=>setSelected(a),50);}} onSelectPresu={p=>{setSelectedCliente(null);setTimeout(()=>setSelectedPresupuesto(p),50);}} onSelectMant={m=>{setSelectedCliente(null);setTimeout(()=>setSelectedMant(m),50);}} onSelectInst={i=>{setSelectedCliente(null);setTimeout(()=>setSelectedInstalacion(i),50);}}/>}
