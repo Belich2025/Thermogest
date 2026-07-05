@@ -1,7 +1,6 @@
 ﻿import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from "react";
 import { supabase } from "./supabase.js";
 import { requestNotificationPermission } from "./firebase.js";
-import { detectarAveria, mejorarDescripcion, detectarMateriales, asistirPresupuesto, generarParteCompleto, generarPresupuestoCompleto, generarLineasPresupuesto } from "./ai.js";
 import { todayStr, addDays, urgInfo } from "./utils/dates.js";
 import { openMaps, sendEmail } from "./utils/links.js";
 import { getTextColor } from "./utils/color.js";
@@ -9,10 +8,6 @@ import { useIsMobile } from "./hooks/useIsMobile.js";
 import { startVoiceSimple } from "./hooks/useVoice.js";
 import { BS_ACTIVOS, BS_ALL, SO_B, MS_ACTIVOS, SO_M, PS_ORDER, MT_TIPOS, MT } from "./constants/status.js";
 import { EQ, RITE_CHECKLIST, TIPO_EQUIPO_OPTIONS } from "./constants/equipment.js";
-import { generarResumenObraPDF } from "./pdf/obraPDF.js";
-import { generarPresupuestoPDF } from "./pdf/presupuestoPDF.js";
-import { generarPartePDF } from "./pdf/partePDF.js";
-import { sendPushNotification } from "./push.js";
 import { useTheme } from "./ThemeContext.jsx";
 import Badge from "./components/ui/Badge.jsx";
 import BadgeProg from "./components/ui/BadgeProg.jsx";
@@ -54,9 +49,9 @@ import NuevoPresupuestoModal from "./components/shared/NuevoPresupuestoModal.jsx
 import RevisionModal from "./components/shared/RevisionModal.jsx";
 import RevisionDetalle from "./components/shared/RevisionDetalle.jsx";
 import InstModal from "./components/shared/InstModal.jsx";
-import PresupuestosList from "./components/views/PresupuestosList.jsx";
-import ClientesList from "./components/views/ClientesList.jsx";
-import AvisosView from "./components/views/AvisosView.jsx";
+const PresupuestosList = lazy(() => import("./components/views/PresupuestosList.jsx"));
+const ClientesList = lazy(() => import("./components/views/ClientesList.jsx"));
+const AvisosView = lazy(() => import("./components/views/AvisosView.jsx"));
 import MantenimientoView from "./components/views/MantenimientoView.jsx";
 import TooltipOnboarding from "./components/shared/TooltipOnboarding.jsx";
 
