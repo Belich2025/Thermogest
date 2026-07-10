@@ -12,6 +12,7 @@ import Btn                  from "../ui/Btn.jsx";
 import BtnContacto          from "./BtnContacto.jsx";
 import ProgramarVisitaModal from "./ProgramarVisitaModal.jsx";
 import ParteModal           from "./ParteModal.jsx";
+import SolicitarPresupuestoModal from "./SolicitarPresupuestoModal.jsx";
 import EquipoDetalle        from "./EquipoDetalle.jsx";
 
 export default function AveriaDetalle({ averia:initA, data, user, techs, empresa, refresh, onClose }) {
@@ -27,6 +28,7 @@ export default function AveriaDetalle({ averia:initA, data, user, techs, empresa
   const [fotoAmpliada, setFotoAmpliada] = useState(null);
   const [nota, setNota]       = useState("");
   const [showParte, setShowParte] = useState(false);
+  const [showSolicitarPresup, setShowSolicitarPresup] = useState(false);
   const [showEquipoHistorial, setShowEquipoHistorial] = useState(false);
   const fileRef = useRef();
   const galleryRef = useRef();
@@ -176,6 +178,7 @@ export default function AveriaDetalle({ averia:initA, data, user, techs, empresa
             </select>
           )}
           <button onClick={()=>{ setTab("partes"); setShowParte(true); }} style={{ padding:"7px 14px",borderRadius:8,border:"none",background:T.accent,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap" }}>+ Parte</button>
+          <button onClick={()=>setShowSolicitarPresup(true)} style={{ padding:"7px 14px",borderRadius:8,border:"none",background:T.purple,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap" }}>+ Presupuesto</button>
           <ProgramarVisitaModal averia={averia} cliente={cl} data={data}/>
 
         </div>
@@ -330,6 +333,16 @@ export default function AveriaDetalle({ averia:initA, data, user, techs, empresa
       </div>
 
       {showParte&&<ParteModal averia={averia} cliente={cl} user={user} empresa={empresa} profiles={data.profiles} materiales={data.materiales||[]} refresh={()=>{loadPartes();refresh?.();}} onClose={()=>setShowParte(false)}/>}
+      {showSolicitarPresup && (
+        <SolicitarPresupuestoModal
+          averiaId={averia.id}
+          clienteId={averia.cliente_id}
+          clienteNombre={cl?.nombre}
+          data={data}
+          refresh={refresh}
+          onClose={()=>setShowSolicitarPresup(false)}
+        />
+      )}
       {showEquipoHistorial && equipoVinculado && (
         <EquipoDetalle
           equipo={equipoVinculado}
