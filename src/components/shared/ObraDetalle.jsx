@@ -44,8 +44,8 @@ export default function ObraDetalle({ obra:initO, data, user, techs, empresa, re
 
   useEffect(()=>{ loadPartes(); loadNotas(); },[obra.id]);
 
-  async function loadPartes() { const {data:d}=await supabase.from("partes").select("*").eq("averia_id","obra_"+obra.id).order("created_at",{ascending:false}); setPartes(d||[]); }
-  async function loadNotas()  { const {data:d}=await supabase.from("notas_averias").select("*").eq("averia_id","obra_"+obra.id).order("created_at",{ascending:true}); setNotas(d||[]); }
+  async function loadPartes() { const {data:d}=await supabase.from("partes").select("*").eq("instalacion_id",obra.id).order("created_at",{ascending:false}); setPartes(d||[]); }
+  async function loadNotas()  { const {data:d}=await supabase.from("notas_averias").select("*").eq("instalacion_id",obra.id).order("created_at",{ascending:true}); setNotas(d||[]); }
 
   async function updStatus(s) {
     const upd = { status: s==="completada" ? "pendiente_facturar" : s };
@@ -56,7 +56,8 @@ export default function ObraDetalle({ obra:initO, data, user, techs, empresa, re
 
   async function addNota() {
     if(!nota.trim()) return;
-    await supabase.from("notas_averias").insert([{averia_id:"obra_"+obra.id,autor_id:user.id,autor_nombre:user.nombre,texto:nota.trim()}]);
+    const {error} = await supabase.from("notas_averias").insert([{instalacion_id:obra.id,autor_id:user.id,autor_nombre:user.nombre,texto:nota.trim()}]);
+    if(error){ alert("Error al guardar la nota: "+error.message); return; }
     setNota(""); loadNotas();
   }
 

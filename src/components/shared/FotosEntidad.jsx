@@ -7,7 +7,7 @@ const COLUMNA = {
   averia:            "averia_id",
   mantenimiento:     "mantenimiento_id",
   presupuesto:       "presupuesto_id",
-  instalacion_obra:  "instalacion_obra_id",
+  instalacion_obra:  "instalacion_id",
 };
 
 const CARPETA = {
