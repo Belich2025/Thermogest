@@ -13,6 +13,7 @@ import Field                from "../ui/Field.jsx";
 import BtnContacto          from "./BtnContacto.jsx";
 import ParteModal           from "./ParteModal.jsx";
 import NuevoEquipoModal     from "./NuevoEquipoModal.jsx";
+import FotosEntidad          from "./FotosEntidad.jsx";
 
 export default function ObraDetalle({ obra:initO, data, user, techs, empresa, refresh, onClose }) {
   const { T, OB_ESTADOS } = useTheme();
@@ -22,7 +23,6 @@ export default function ObraDetalle({ obra:initO, data, user, techs, empresa, re
   const [obra, setObra] = useState(initO);
   const [tab, setTab]   = useState("info");
   const [partes, setPartes]   = useState([]);
-  const [fotos, setFotos]     = useState([]);
   const [notas, setNotas]     = useState([]);
   const [nota, setNota]       = useState("");
   const [showParte, setShowParte] = useState(false);
@@ -31,7 +31,6 @@ export default function ObraDetalle({ obra:initO, data, user, techs, empresa, re
   const [progDate, setProgDate]       = useState("");
   const [progNota, setProgNota]       = useState("");
   const [savingProg, setSavingProg]   = useState(false);
-  const fileRef = useRef();
   const notaRef = useRef();
 
   const cl    = (data.clientes||[]).find(c=>c.id===obra.cliente_id);
@@ -43,10 +42,9 @@ export default function ObraDetalle({ obra:initO, data, user, techs, empresa, re
   const isPendFacturar = obra.status === "pendiente_facturar";
   const isFacturada    = obra.status === "facturada";
 
-  useEffect(()=>{ loadPartes(); loadFotos(); loadNotas(); },[obra.id]);
+  useEffect(()=>{ loadPartes(); loadNotas(); },[obra.id]);
 
   async function loadPartes() { const {data:d}=await supabase.from("partes").select("*").eq("averia_id","obra_"+obra.id).order("created_at",{ascending:false}); setPartes(d||[]); }
-  async function loadFotos()  { const {data:d}=await supabase.from("fotos_averias").select("*").eq("averia_id","obra_"+obra.id); setFotos(d||[]); }
   async function loadNotas()  { const {data:d}=await supabase.from("notas_averias").select("*").eq("averia_id","obra_"+obra.id).order("created_at",{ascending:true}); setNotas(d||[]); }
 
   async function updStatus(s) {
@@ -73,14 +71,6 @@ export default function ObraDetalle({ obra:initO, data, user, techs, empresa, re
     if(!error){ refresh?.(); setShowProgram(false); setSavingProg(false); }
     else { alert("Error: "+error.message); setSavingProg(false); }
   }
-
-  async function subirFoto(e) {
-    const files=Array.from(e.target.files).slice(0,4-fotos.length);
-    for(const file of files){ const ext=file.name.split(".").pop(); const path=`obras/${obra.id}/${Date.now()}.${ext}`; const {error}=await supabase.storage.from("fotos").upload(path,file,{upsert:false}); if(!error) await supabase.from("fotos_averias").insert([{averia_id:"obra_"+obra.id,storage_path:path}]); }
-    loadFotos(); e.target.value="";
-  }
-
-  function getFotoUrl(path){ const {data}=supabase.storage.from("fotos").getPublicUrl(path); return data?.publicUrl||""; }
 
   return (
     <Modal onClose={onClose} w={720}>
@@ -148,7 +138,7 @@ export default function ObraDetalle({ obra:initO, data, user, techs, empresa, re
 
         {/* Fila 5: tabs */}
         <div style={{ padding:"0 14px 10px",display:"flex",gap:6 }}>
-          {[{k:"info",l:"Info"},{k:"fotos",l:`Fotos (${fotos.length})`},{k:"notas",l:`Notas (${notas.length})`},{k:"partes",l:`Partes (${partes.length})`}].map(t=>(
+          {[{k:"info",l:"Info"},{k:"fotos",l:"Fotos"},{k:"notas",l:`Notas (${notas.length})`},{k:"partes",l:`Partes (${partes.length})`}].map(t=>(
             <button key={t.k} onClick={()=>setTab(t.k)} style={{ flex:1,padding:"8px 4px",borderRadius:8,border:`1px solid ${tab===t.k?T.accent:T.border}`,background:tab===t.k?T.accentLight:T.card,color:tab===t.k?T.accent:T.sub,fontSize:12,fontWeight:tab===t.k?700:400,cursor:"pointer",textAlign:"center",fontFamily:"'DM Sans',sans-serif" }}>{t.l}</button>
           ))}
         </div>
@@ -240,16 +230,7 @@ export default function ObraDetalle({ obra:initO, data, user, techs, empresa, re
           </div>
         )}
 
-        {tab==="fotos"&&(
-          <div>
-            <div style={{ display:"flex",justifyContent:"space-between",marginBottom:10 }}>
-              <span style={{ fontSize:12,color:T.sub }}>{fotos.length}/4 fotos</span>
-              {fotos.length<4&&<Btn ch="Añadir foto" onClick={()=>fileRef.current.click()} v="g" sm/>}
-              <input ref={fileRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={subirFoto}/>
-            </div>
-            {fotos.length===0?<div onClick={()=>fileRef.current.click()} style={{ border:`2px dashed ${T.border}`,borderRadius:10,padding:30,textAlign:"center",cursor:"pointer",color:T.muted }}>Pulsa para añadir fotos</div>:<div style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8 }}>{fotos.map(f=><div key={f.id} style={{ position:"relative",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",border:`1px solid ${T.border}` }}><img src={getFotoUrl(f.storage_path)} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/><button onClick={async()=>{ await supabase.storage.from("fotos").remove([f.storage_path]); await supabase.from("fotos_averias").delete().eq("id",f.id); loadFotos(); }} style={{ position:"absolute",top:6,right:6,width:26,height:26,borderRadius:"50%",background:"rgba(0,0,0,0.6)",border:"none",color:"#fff",cursor:"pointer" }}>×</button></div>)}</div>}
-          </div>
-        )}
+        {tab==="fotos"&&<FotosEntidad entidad="instalacion_obra" entidadId={obra.id}/>}
 
         {tab==="notas"&&(
           <div style={{ display:"flex",flexDirection:"column",gap:10 }}>

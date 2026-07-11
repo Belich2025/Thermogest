@@ -10,6 +10,7 @@ import Btn                  from "../ui/Btn.jsx";
 import BtnContacto          from "./BtnContacto.jsx";
 import ProgramarVisitaModal from "./ProgramarVisitaModal.jsx";
 import ParteModal           from "./ParteModal.jsx";
+import FotosEntidad          from "./FotosEntidad.jsx";
 
 export default function MantenimientoDetalle({ mant:initM, data, user, techs, empresa, refresh, onClose }) {
   const { T, MS } = useTheme();
@@ -20,22 +21,18 @@ export default function MantenimientoDetalle({ mant:initM, data, user, techs, em
   const [mant, setMant]     = useState(initM);
   const [notas, setNotas]   = useState([]);
   const [partes, setPartes] = useState([]);
-  const [fotos, setFotos]   = useState([]);
   const [nota, setNota]     = useState("");
   const [showParte, setShowParte] = useState(false);
   const notaRef = useRef();
-  const fileRef = useRef();
-  const galleryRef = useRef();
   const [voiceActive, setVoiceActive] = useState(false);
 
   const cl = (data.clientes||[]).find(c=>c.id===mant.cliente_id);
   const s  = MS[mant.status];
 
-  useEffect(()=>{ loadNotas(); loadPartes(); loadFotos(); },[mant.id]);
+  useEffect(()=>{ loadNotas(); loadPartes(); },[mant.id]);
 
   async function loadNotas()  { const {data:d}=await supabase.from("notas_mantenimientos").select("*").eq("mantenimiento_id", mant.id).order("created_at",{ascending:true}); setNotas(d||[]); }
   async function loadPartes() { const {data:d}=await supabase.from("partes").select("*").eq("mantenimiento_id",mant.id).order("created_at",{ascending:false}); setPartes(d||[]); }
-  async function loadFotos()  { const {data:d}=await supabase.from("fotos_averias").select("*").eq("mantenimiento_id", mant.id); setFotos(d||[]); }
 
   async function updStatus(newStatus) {
     const updates = { status: newStatus };
@@ -50,14 +47,6 @@ export default function MantenimientoDetalle({ mant:initM, data, user, techs, em
     await supabase.from("notas_mantenimientos").insert([{mantenimiento_id: mant.id,autor_id:user.id,autor_nombre:user.nombre,texto}]);
     setNota(""); loadNotas();
   }
-
-  async function subirFoto(e) {
-    const files=Array.from(e.target.files).slice(0,4-fotos.length);
-    for(const file of files){ const ext=file.name.split(".").pop(); const path=`mantenimientos/${mant.id}/${Date.now()}.${ext}`; const {error}=await supabase.storage.from("fotos").upload(path,file,{upsert:false}); if(!error) await supabase.from("fotos_averias").insert([{mantenimiento_id: mant.id,storage_path:path}]); }
-    loadFotos(); e.target.value="";
-  }
-
-  function getFotoUrl(path){ const {data}=supabase.storage.from("fotos").getPublicUrl(path); return data?.publicUrl||""; }
 
   function startVoice(cb) {
     if(!("webkitSpeechRecognition" in window||"SpeechRecognition" in window)){ alert("Tu navegador no soporta dictado"); return; }
@@ -149,7 +138,7 @@ export default function MantenimientoDetalle({ mant:initM, data, user, techs, em
         <div style={{ padding:"0 14px 10px",display:"flex",gap:6 }}>
           {["info","fotos","notas","partes"].map(t=>(
             <button key={t} onClick={()=>setTab(t)} style={{ flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${tab===t?T.accent:T.border}`,background:tab===t?T.accentLight:T.card,color:tab===t?T.accent:T.sub,fontSize:11,fontWeight:tab===t?700:400,cursor:"pointer",textAlign:"center" }}>
-              {{info:"Info",fotos:`Fotos (${fotos.length})`,notas:`Notas (${notas.length})`,partes:`Partes (${partes.length})`}[t]}
+              {{info:"Info",fotos:"Fotos",notas:`Notas (${notas.length})`,partes:`Partes (${partes.length})`}[t]}
             </button>
           ))}
         </div>
@@ -189,23 +178,7 @@ export default function MantenimientoDetalle({ mant:initM, data, user, techs, em
           </div>
         )}
 
-        {tab==="fotos"&&(
-          <div>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10, gap:8 }}>
-              <input ref={fileRef} type="file" accept="image/*" capture="environment" multiple style={{ display:"none" }} onChange={subirFoto}/>
-              <input ref={galleryRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={subirFoto}/>
-              <span style={{ fontSize:12,color:T.sub }}>{fotos.length}/4 fotos</span>
-              {fotos.length<4 && (
-                <div style={{ display:"flex", gap:6 }}>
-                  <Btn ch="Cámara" onClick={()=>fileRef.current.click()} v="g" sm/>
-                  <Btn ch="Galería" onClick={()=>galleryRef.current.click()} v="s" sm/>
-                </div>
-              )}
-            </div>
-            {fotos.length===0?<div onClick={()=>fileRef.current.click()} style={{ border:`2px dashed ${T.border}`,borderRadius:10,padding:30,textAlign:"center",cursor:"pointer",color:T.muted }}>Pulsa para añadir fotos</div>
-            :<div style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8 }}>{fotos.map(f=><div key={f.id} style={{ position:"relative",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",border:`1px solid ${T.border}` }}><img src={getFotoUrl(f.storage_path)} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/><button onClick={async()=>{ await supabase.storage.from("fotos").remove([f.storage_path]); await supabase.from("fotos_averias").delete().eq("id",f.id); loadFotos(); }} style={{ position:"absolute",top:6,right:6,width:26,height:26,borderRadius:"50%",background:"rgba(0,0,0,0.6)",border:"none",color:"#fff",cursor:"pointer" }}>×</button></div>)}</div>}
-          </div>
-        )}
+        {tab==="fotos"&&<FotosEntidad entidad="mantenimiento" entidadId={mant.id}/>}
 
         {tab==="notas"&&(
           <div style={{ display:"flex",flexDirection:"column",gap:10 }}>

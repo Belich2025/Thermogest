@@ -9,6 +9,7 @@ import { generarPresupuestoPDF }    from "../../pdf/presupuestoPDF.js";
 import Modal                        from "../ui/Modal.jsx";
 import Field                        from "../ui/Field.jsx";
 import Btn                          from "../ui/Btn.jsx";
+import FotosEntidad                  from "./FotosEntidad.jsx";
 import BtnContacto                  from "./BtnContacto.jsx";
 
 export default function PresupuestoDetalle({ pres:initP, data, user, refresh, empresa, onClose }) {
@@ -280,6 +281,14 @@ export default function PresupuestoDetalle({ pres:initP, data, user, refresh, em
         {/* Descripción */}
         {!editMode&&(
           <div style={{ padding:"10px 12px",background:T.surface,borderRadius:8,border:`1px solid ${T.border}`,fontSize:13,color:T.text,lineHeight:1.6 }}>{p.descripcion}</div>
+        )}
+
+        {/* Fotos */}
+        {!editMode&&(
+          <div>
+            <div style={{ fontSize:10,fontWeight:600,color:T.muted,textTransform:"uppercase",marginBottom:8 }}>Fotos</div>
+            <FotosEntidad entidad="presupuesto" entidadId={p.id}/>
+          </div>
         )}
 
         {/* Avería vinculada — siempre visible en vista de lectura */}
