@@ -9,7 +9,7 @@ import Ava                from "../ui/Ava.jsx";
 import Modal              from "../ui/Modal.jsx";
 import MHead              from "../ui/MHead.jsx";
 import Field              from "../ui/Field.jsx";
-import ImportarExcelModal from "../shared/ImportarExcelModal.jsx";
+import ImportarExcelModal, { getClientesImportConfig } from "../shared/ImportarExcelModal.jsx";
 import ClienteDetalle     from "../shared/ClienteDetalle.jsx";
 import AveriaDetalle      from "../shared/AveriaDetalle.jsx";
 import PresupuestoDetalle from "../shared/PresupuestoDetalle.jsx";
@@ -89,7 +89,7 @@ export default function ClientesList({ data, refresh, user, onTooltip }) {
             <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}><span style={{ fontSize:10,padding:"2px 9px",borderRadius:20,background:T.accentLight,border:"1px solid #bfdbfe",color:T.accent,fontWeight:600 }}>{bds} averías</span>{open>0&&<span style={{ fontSize:10,padding:"2px 9px",borderRadius:20,background:T.redLight,border:"1px solid #fecaca",color:T.red,fontWeight:600 }}>{open} abiertas</span>}{ins>0&&<span style={{ fontSize:10,padding:"2px 9px",borderRadius:20,background:T.tealLight,border:`1px solid ${T.teal}28`,color:T.teal,fontWeight:600 }}>{ins} instalación{ins!==1?"es":""}</span>}</div>
           </div>; })}
       </div>
-      {showImport&&<ImportarExcelModal data={data} refresh={()=>{ refresh?.(); setShowImport(false); }} onClose={()=>setShowImport(false)}/>}
+      {showImport&&<ImportarExcelModal config={getClientesImportConfig(data)} refresh={()=>{ refresh?.(); setShowImport(false); }} onClose={()=>setShowImport(false)}/>}
       {showNew&&<Modal onClose={()=>setShowNew(false)} w={420}><MHead title="Nuevo cliente" onClose={()=>setShowNew(false)}/><div style={{ padding:"18px 22px 22px",display:"flex",flexDirection:"column",gap:13 }}><Field label="Nombre *"><input value={form.nombre} onChange={e=>upd("nombre",e.target.value)} style={inp()} placeholder="Nombre o razón social"/></Field><Field label="DNI / NIF / CIF"><input value={form.dni||""} onChange={e=>upd("dni",e.target.value)} style={inp()} placeholder="12345678A (opcional)"/></Field><Field label="Teléfono"><input value={form.telefono} onChange={e=>upd("telefono",e.target.value)} style={inp()} placeholder="6XX XXX XXX"/></Field><Field label="Email"><input type="email" value={form.email} onChange={e=>upd("email",e.target.value)} style={inp()} placeholder="correo@ejemplo.com"/></Field><Field label="Dirección"><input value={form.direccion} onChange={e=>upd("direccion",e.target.value)} style={inp()} placeholder="Calle, número..."/></Field><div style={{ display:"flex",justifyContent:"flex-end",gap:8 }}><Btn ch="Cancelar" onClick={()=>setShowNew(false)} v="g"/><Btn ch="Añadir cliente" onClick={add} disabled={!form.nombre.trim()}/></div></div></Modal>}
       {selAveriaGlobal&&<AveriaDetalle averia={selAveriaGlobal} data={data} user={user} techs={[]} empresa={{}} refresh={refresh} onClose={()=>setSelAveriaGlobal(null)}/>}
       {selPresuGlobal&&<PresupuestoDetalle pres={selPresuGlobal} data={data} user={user} refresh={refresh} empresa={{}} onClose={()=>setSelPresuGlobal(null)}/>}

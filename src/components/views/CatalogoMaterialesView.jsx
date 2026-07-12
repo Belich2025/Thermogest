@@ -6,6 +6,7 @@ import { supabase } from "../../supabase.js";
 import Modal from "../ui/Modal.jsx";
 import MHead from "../ui/MHead.jsx";
 import Btn from "../ui/Btn.jsx";
+import ImportarExcelModal, { getMaterialesImportConfig } from "../shared/ImportarExcelModal.jsx";
 
 export default function CatalogoMaterialesView({ onClose }) {
   const { T } = useTheme();
@@ -15,6 +16,7 @@ export default function CatalogoMaterialesView({ onClose }) {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   useEffect(() => { load(); }, []);
 
@@ -68,6 +70,7 @@ export default function CatalogoMaterialesView({ onClose }) {
 
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar material..." style={{ ...inp({ padding: "8px 12px", fontSize: 13 }), flex: 1 }} />
+          <Btn ch="Importar Excel" onClick={() => setShowImport(true)} v="g" sm />
           <Btn ch="+ Añadir material" onClick={addRow} v="b" sm />
         </div>
 
@@ -98,6 +101,7 @@ export default function CatalogoMaterialesView({ onClose }) {
         </div>
 
       </div>
+      {showImport && <ImportarExcelModal config={getMaterialesImportConfig(rows)} refresh={() => { load(); setShowImport(false); }} onClose={() => setShowImport(false)} />}
     </Modal>
   );
 }

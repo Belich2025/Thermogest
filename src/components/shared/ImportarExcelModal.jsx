@@ -8,10 +8,165 @@ import MHead                      from "../ui/MHead.jsx";
 import Btn                        from "../ui/Btn.jsx";
 import Field                      from "../ui/Field.jsx";
 
-export default function ImportarExcelModal({ data, refresh, onClose }) {
+function normalizar(s) { return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
+
+const CL_CAMPOS = [
+  {key:"nombre",      label:"Nombre",          required:true},
+  {key:"apellidos",   label:"Apellidos",        info:"Se concatena al nombre con espacio"},
+  {key:"telefono",    label:"Teléfono / Móvil", info:"Teléfono principal del cliente"},
+  {key:"telefonoFijo",label:"Teléfono fijo",    info:"Se añade a las notas"},
+  {key:"email",       label:"Email"},
+  {key:"direccion",   label:"Dirección / Calle"},
+  {key:"ciudad",      label:"Ciudad",           info:"Se añade tras la dirección"},
+  {key:"provincia",   label:"Provincia",        info:"Se añade al final de la dirección"},
+  {key:"dni",         label:"CIF / DNI",        info:"Se guarda en el campo DNI/NIF del cliente"},
+  {key:"notas",       label:"Notas"},
+];
+
+export function getClientesImportConfig(data) {
+  const existentes = data.clientes || [];
+  return {
+    campos: CL_CAMPOS,
+    existentes,
+    entidadPlural: "clientes",
+    secondary: getEquiposImportConfig(),
+    buildIndex(list) {
+      const byPhone = {}, byEmail = {}, byNombre = {};
+      list.forEach(c => {
+        if(c.telefono) byPhone[c.telefono.replace(/\s/g,"")] = c.id;
+        if(c.email)    byEmail[c.email.toLowerCase()] = c.id;
+        byNombre[normalizar(c.nombre)] = c.id;
+      });
+      return { byPhone, byEmail, byNombre };
+    },
+    esDuplicado({ tel, email, nombre }, index) {
+      return !!((tel && index.byPhone[tel]) || (email && index.byEmail[email]) || index.byNombre[normalizar(nombre)]);
+    },
+    registrarEnIndex(index, c) {
+      if(c.telefono) index.byPhone[c.telefono.replace(/\s/g,"")] = c.id;
+      if(c.email)    index.byEmail[c.email.toLowerCase()] = c.id;
+      index.byNombre[normalizar(c.nombre)] = c.id;
+    },
+  };
+}
+
+const EQ_CAMPOS = [
+  {key:"clienteRef",label:"Cliente (referencia)",required:true},{key:"nombre",label:"Nombre equipo",required:true},
+  {key:"marca",label:"Marca"},{key:"modelo",label:"Modelo"},{key:"numero_serie",label:"Nº serie"},
+  {key:"año_instalacion",label:"Año instalación"},{key:"direccion",label:"Dirección"},{key:"ubicacion",label:"Ubicación"},
+];
+
+export function getEquiposImportConfig() {
+  return {
+    campos: EQ_CAMPOS,
+    vincularCliente(ref, clientesIndex) {
+      const refN = String(ref||"").toLowerCase().replace(/\s/g,"");
+      let clienteId = clientesIndex.byPhone[refN] || clientesIndex.byEmail[refN] || null;
+      if(!clienteId) { const k=Object.keys(clientesIndex.byNombre).find(k=>k.includes(refN)||refN.includes(k)); if(k) clienteId=clientesIndex.byNombre[k]; }
+      return clienteId;
+    },
+  };
+}
+
+const MATERIALES_CAMPOS = [
+  {key:"nombre",     label:"Nombre",              required:true},
+  {key:"precio",     label:"Precio",              required:true, info:"Se actualiza siempre en los materiales existentes"},
+  {key:"referencia", label:"Referencia / Código",  info:"Si coincide con un material existente, se actualiza en vez de duplicar"},
+];
+
+export function getMaterialesImportConfig(existentes) {
+  return {
+    campos: MATERIALES_CAMPOS,
+    existentes: existentes || [],
+    entidadPlural: "materiales",
+    autoMap(cols) {
+      const m = { nombre:"", precio:"", referencia:"" };
+      cols.forEach(c => {
+        const cl = c.toLowerCase();
+        if(!m.nombre     && (cl.includes("nombre")||cl.includes("descrip")||cl.includes("concepto"))) m.nombre = c;
+        if(!m.precio     && (cl.includes("precio")||cl.includes("pvp")||cl.includes("importe")||cl.includes("coste"))) m.precio = c;
+        if(!m.referencia && (cl.includes("referencia")||cl.includes("ref")||cl.includes("codigo")||cl.includes("código")||cl.includes("sku"))) m.referencia = c;
+      });
+      return m;
+    },
+    buildIndex(list) {
+      const byReferencia = {}, byNombre = {}, byId = {};
+      list.forEach(m => {
+        byId[m.id] = m;
+        const ref = String(m.referencia||"").toLowerCase().trim();
+        if(ref) byReferencia[ref] = m.id;
+        byNombre[normalizar(m.nombre)] = m.id;
+      });
+      return { byReferencia, byNombre, byId };
+    },
+    matchExistente(fila, index) {
+      const ref = String(fila.referencia||"").toLowerCase().trim();
+      if(ref) {
+        const porReferencia = index.byReferencia[ref];
+        if(porReferencia != null) return porReferencia;
+        const porNombre = index.byNombre[normalizar(fila.nombre)];
+        if(porNombre == null) return null;
+        const existente = index.byId[porNombre];
+        const refExistente = String(existente?.referencia||"").toLowerCase().trim();
+        if(refExistente && refExistente !== ref) return null;
+        return porNombre;
+      }
+      return index.byNombre[normalizar(fila.nombre)] ?? null;
+    },
+    resolverAccion(fila, index) {
+      const id = this.matchExistente(fila, index);
+      if(!id) return { tipo:"insert", payload:{ nombre:fila.nombre, precio:fila.precio, referencia:fila.referencia||null } };
+      const existente = index.byId[id];
+      const payload = { precio: fila.precio };
+      if(fila.referencia && !existente?.referencia) payload.referencia = fila.referencia;
+      return { tipo:"update", id, payload };
+    },
+    contarPlan(filas, index) {
+      let añadir = 0, actualizar = 0;
+      filas.forEach(f => { if(this.resolverAccion(f, index).tipo==="insert") añadir++; else actualizar++; });
+      return { añadir, actualizar };
+    },
+    async ejecutarImportacion(filas, index, onProgress) {
+      const BATCH = 50;
+      let añadidos = 0, actualizados = 0, incompletos = 0;
+      for(let i=0; i<filas.length; i+=BATCH) {
+        const batch = filas.slice(i,i+BATCH);
+        for(const fila of batch) {
+          if(!fila.nombre || fila.precio==null || isNaN(fila.precio)) { incompletos++; continue; }
+          const accion = this.resolverAccion(fila, index);
+          if(accion.tipo==="insert") {
+            const { data:ins, error } = await supabase.from("materiales").insert([accion.payload]).select("id,nombre,precio,referencia");
+            if(!error && ins?.[0]) {
+              const nuevo = ins[0];
+              añadidos++;
+              index.byId[nuevo.id] = nuevo;
+              if(nuevo.referencia) index.byReferencia[String(nuevo.referencia).toLowerCase().trim()] = nuevo.id;
+              index.byNombre[normalizar(nuevo.nombre)] = nuevo.id;
+            }
+          } else {
+            const { error } = await supabase.from("materiales").update(accion.payload).eq("id", accion.id);
+            if(!error) {
+              actualizados++;
+              Object.assign(index.byId[accion.id], accion.payload);
+              if(accion.payload.referencia) index.byReferencia[String(accion.payload.referencia).toLowerCase().trim()] = accion.id;
+            }
+          }
+        }
+        onProgress?.(Math.min(100, Math.round(((i+BATCH)/filas.length)*100)));
+      }
+      return { añadidos, actualizados, incompletos };
+    },
+  };
+}
+
+export default function ImportarExcelModal({ config, refresh, onClose }) {
   const { T } = useTheme();
   const inp = mkInp(T);
   const isMobile = useIsMobile();
+  const clientesConfig = config;
+  const equiposConfig  = clientesConfig.secondary || null;
+  const tieneSecundaria = !!equiposConfig;
+  const pasoConfirmar   = tieneSecundaria ? 4 : 3;
   const [paso, setPaso]               = useState(1);
   const [clienteFile, setClienteFile] = useState(null);
   const [xlsCols, setXlsCols]         = useState([]);
@@ -82,7 +237,7 @@ export default function ImportarExcelModal({ data, refresh, onClose }) {
     const { cols, preview, allRows } = await parseFile(file);
     console.log(`[Importar] Archivo clientes: ${file.name} — ${allRows.length} filas de datos, ${cols.length} columnas`);
     setXlsCols(cols); setXlsRows(preview); setXlsAllRows(allRows);
-    setMap(autoMapCols(cols,"cliente"));
+    setMap(clientesConfig.autoMap ? clientesConfig.autoMap(cols) : autoMapCols(cols,"cliente"));
   }
 
   async function handleEquipoFile(e) {
@@ -100,6 +255,17 @@ export default function ImportarExcelModal({ data, refresh, onClose }) {
   }
 
   function getRow(row, cols, col) { return col ? String(row[cols.indexOf(col)]||"").trim() : ""; }
+
+  function buildFilasGenericas() {
+    return mappedClientes().map(row => {
+      const fila = {};
+      clientesConfig.campos.forEach(f => {
+        const raw = getRow(row, xlsCols, map[f.key]);
+        fila[f.key] = f.key==="precio" ? parseFloat(String(raw).replace(",",".")) : raw;
+      });
+      return fila;
+    });
+  }
 
   function buildNombre(row) {
     const n = getRow(row, xlsCols, map.nombre);
@@ -140,14 +306,20 @@ export default function ImportarExcelModal({ data, refresh, onClose }) {
 
   async function ejecutarImportacion() {
     setImporting(true); setProgress(0);
+
+    if(clientesConfig.ejecutarImportacion) {
+      const index = clientesConfig.buildIndex(clientesConfig.existentes);
+      const filas = buildFilasGenericas();
+      const stats = await clientesConfig.ejecutarImportacion(filas, index, p=>setProgress(p));
+      setResult(stats);
+      setImporting(false);
+      refresh?.();
+      return;
+    }
+
     const BATCH = 50;
-    const existentes = data.clientes || [];
-    const byPhone  = {}; const byEmail = {}; const byNombre = {};
-    existentes.forEach(c => {
-      if(c.telefono) byPhone[c.telefono.replace(/\s/g,"")] = c.id;
-      if(c.email)    byEmail[c.email.toLowerCase()] = c.id;
-      byNombre[(c.nombre||"").toLowerCase()] = c.id;
-    });
+    const existentes = clientesConfig.existentes;
+    const index = clientesConfig.buildIndex(existentes);
 
     const clienteRows = mappedClientes();
     console.log(`[Importar] Total filas con nombre válido: ${clienteRows.length} (existentes en BD: ${existentes.length})`);
@@ -168,7 +340,7 @@ export default function ImportarExcelModal({ data, refresh, onClose }) {
           incompletos++; return;
         }
         const email = getRow(row,xlsCols,map.email).toLowerCase();
-        if((tel && byPhone[tel]) || (email && byEmail[email]) || byNombre[nombre.toLowerCase()]) { duplicados++; return; }
+        if(clientesConfig.esDuplicado({ tel, email, nombre }, index)) { duplicados++; return; }
         const dniVal = map.dni ? getRow(row,xlsCols,map.dni) : "";
         toInsert.push({ nombre, telefono:tel||telefonoFijo||null, email:email||null, direccion:buildDireccion(row)||null, dni:dniVal||null, notas:buildNotas(row) });
       });
@@ -176,7 +348,7 @@ export default function ImportarExcelModal({ data, refresh, onClose }) {
       if(toInsert.length>0) {
         const { data:ins, error } = await supabase.from("clientes").insert(toInsert).select("id,nombre,telefono,email");
         if(error) console.error(`[Importar] Error en lote ${Math.floor(i/BATCH)+1}:`, error);
-        if(ins) { importados+=ins.length; ins.forEach(c=>{ if(c.telefono) byPhone[c.telefono.replace(/\s/g,"")]=c.id; if(c.email) byEmail[c.email.toLowerCase()]=c.id; byNombre[(c.nombre||"").toLowerCase()]=c.id; }); }
+        if(ins) { importados+=ins.length; ins.forEach(c=>clientesConfig.registrarEnIndex(index, c)); }
         console.log(`[Importar] Lote ${Math.floor(i/BATCH)+1} insertado: ${ins?.length??0} ok — acumulado: ${importados}`);
       }
       setProgress(Math.min(70, Math.round(((i+BATCH)/clienteRows.length)*70)));
@@ -192,9 +364,7 @@ export default function ImportarExcelModal({ data, refresh, onClose }) {
         const toInsert = [];
         batch.forEach(row => {
           const ref = getRow(row,eqCols,eqMap.clienteRef);
-          const refN = ref.toLowerCase().replace(/\s/g,"");
-          let clienteId = byPhone[refN] || byEmail[refN] || null;
-          if(!clienteId) { const k=Object.keys(byNombre).find(k=>k.includes(refN)||refN.includes(k)); if(k) clienteId=byNombre[k]; }
+          const clienteId = equiposConfig.vincularCliente(ref, index);
           if(!clienteId) { equiposSinCliente++; return; }
           const añoStr = getRow(row,eqCols,eqMap.año_instalacion);
           const año = añoStr ? parseInt(añoStr) : null;
@@ -210,24 +380,6 @@ export default function ImportarExcelModal({ data, refresh, onClose }) {
     setImporting(false);
     refresh?.();
   }
-
-  const CL_CAMPOS = [
-    {key:"nombre",      label:"Nombre",          required:true},
-    {key:"apellidos",   label:"Apellidos",        info:"Se concatena al nombre con espacio"},
-    {key:"telefono",    label:"Teléfono / Móvil", info:"Teléfono principal del cliente"},
-    {key:"telefonoFijo",label:"Teléfono fijo",    info:"Se añade a las notas"},
-    {key:"email",       label:"Email"},
-    {key:"direccion",   label:"Dirección / Calle"},
-    {key:"ciudad",      label:"Ciudad",           info:"Se añade tras la dirección"},
-    {key:"provincia",   label:"Provincia",        info:"Se añade al final de la dirección"},
-    {key:"dni",         label:"CIF / DNI",        info:"Se guarda en el campo DNI/NIF del cliente"},
-    {key:"notas",       label:"Notas"},
-  ];
-  const EQ_CAMPOS = [
-    {key:"clienteRef",label:"Cliente (referencia)",required:true},{key:"nombre",label:"Nombre equipo",required:true},
-    {key:"marca",label:"Marca"},{key:"modelo",label:"Modelo"},{key:"numero_serie",label:"Nº serie"},
-    {key:"año_instalacion",label:"Año instalación"},{key:"direccion",label:"Dirección"},{key:"ubicacion",label:"Ubicación"},
-  ];
 
   const ColSel = ({value, onChange, cols, rows}) => {
     const exampleVal = value && rows?.length ? rows.map(r=>String(r[cols.indexOf(value)]||"").trim()).find(v=>v)||"" : "";
@@ -255,25 +407,37 @@ export default function ImportarExcelModal({ data, refresh, onClose }) {
     <Modal onClose={onClose} w={480}>
       <MHead title="Importación completada" onClose={onClose}/>
       <div style={{ padding:"24px 28px 28px",display:"flex",flexDirection:"column",gap:14 }}>
-        <div style={{ background:T.greenLight,border:"1px solid #bbf7d0",borderRadius:12,padding:"16px 20px",display:"flex",gap:14,alignItems:"flex-start" }}>
-          <span style={{ fontSize:28 }}></span>
-          <div>
-            <div style={{ fontSize:15,fontWeight:700,color:T.green,marginBottom:4 }}>Clientes</div>
-            <div style={{ fontSize:13,color:T.text }}><strong>{result.importados}</strong> clientes importados correctamente</div>
-            {result.duplicados>0&&<div style={{ fontSize:12,color:T.muted,marginTop:3 }}>{result.duplicados} duplicados saltados (ya existían)</div>}
-            {result.incompletos>0&&<div style={{ fontSize:12,color:"#b45309",marginTop:3 }}>{result.incompletos} incompletos saltados (falta nombre, teléfono o dirección)</div>}
-          </div>
-        </div>
-        {(result.equiposImportados>0||result.equiposSinCliente>0)&&(
-          <div style={{ background:T.accentLight,border:"1px solid #bfdbfe",borderRadius:12,padding:"16px 20px",display:"flex",gap:14,alignItems:"flex-start" }}>
+        {clientesConfig.ejecutarImportacion ? (
+          <div style={{ background:T.greenLight,border:"1px solid #bbf7d0",borderRadius:12,padding:"16px 20px",display:"flex",gap:14,alignItems:"flex-start" }}>
             <span style={{ fontSize:28 }}></span>
             <div>
-              <div style={{ fontSize:15,fontWeight:700,color:T.accent,marginBottom:4 }}>Equipos</div>
-              <div style={{ fontSize:13,color:T.text }}><strong>{result.equiposImportados}</strong> equipos importados correctamente</div>
-              {result.equiposSinCliente>0&&<div style={{ fontSize:12,color:T.muted,marginTop:3 }}>{result.equiposSinCliente} sin cliente encontrado (saltados)</div>}
+              <div style={{ fontSize:15,fontWeight:700,color:T.green,marginBottom:4 }}>Materiales</div>
+              <div style={{ fontSize:13,color:T.text }}><strong>{result.añadidos}</strong> materiales añadidos</div>
+              <div style={{ fontSize:13,color:T.text }}><strong>{result.actualizados}</strong> materiales actualizados</div>
+              {result.incompletos>0&&<div style={{ fontSize:12,color:"#b45309",marginTop:3 }}>{result.incompletos} incompletos saltados (falta nombre o precio)</div>}
             </div>
           </div>
-        )}
+        ) : (<>
+          <div style={{ background:T.greenLight,border:"1px solid #bbf7d0",borderRadius:12,padding:"16px 20px",display:"flex",gap:14,alignItems:"flex-start" }}>
+            <span style={{ fontSize:28 }}></span>
+            <div>
+              <div style={{ fontSize:15,fontWeight:700,color:T.green,marginBottom:4 }}>Clientes</div>
+              <div style={{ fontSize:13,color:T.text }}><strong>{result.importados}</strong> clientes importados correctamente</div>
+              {result.duplicados>0&&<div style={{ fontSize:12,color:T.muted,marginTop:3 }}>{result.duplicados} duplicados saltados (ya existían)</div>}
+              {result.incompletos>0&&<div style={{ fontSize:12,color:"#b45309",marginTop:3 }}>{result.incompletos} incompletos saltados (falta nombre, teléfono o dirección)</div>}
+            </div>
+          </div>
+          {(result.equiposImportados>0||result.equiposSinCliente>0)&&(
+            <div style={{ background:T.accentLight,border:"1px solid #bfdbfe",borderRadius:12,padding:"16px 20px",display:"flex",gap:14,alignItems:"flex-start" }}>
+              <span style={{ fontSize:28 }}></span>
+              <div>
+                <div style={{ fontSize:15,fontWeight:700,color:T.accent,marginBottom:4 }}>Equipos</div>
+                <div style={{ fontSize:13,color:T.text }}><strong>{result.equiposImportados}</strong> equipos importados correctamente</div>
+                {result.equiposSinCliente>0&&<div style={{ fontSize:12,color:T.muted,marginTop:3 }}>{result.equiposSinCliente} sin cliente encontrado (saltados)</div>}
+              </div>
+            </div>
+          )}
+        </>)}
         <div style={{ display:"flex",justifyContent:"flex-end" }}>
           <Btn ch="Cerrar" onClick={onClose}/>
         </div>
@@ -286,22 +450,22 @@ export default function ImportarExcelModal({ data, refresh, onClose }) {
       <MHead title="Importar desde Excel" onClose={onClose}/>
       {/* Steps indicator */}
       <div style={{ padding:"14px 28px 0",display:"flex",alignItems:"center" }}>
-        {[1,2,3,4].map((s,i)=>(
+        {(tieneSecundaria?["Archivo","Columnas","Equipos","Confirmar"]:["Archivo","Columnas","Confirmar"]).map((label,i)=>{ const s=i+1; return (
           <React.Fragment key={s}>
             <div style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:3 }}>
               <div style={{ width:30,height:30,borderRadius:"50%",background:paso>=s?T.accent:T.border,color:paso>=s?"#fff":T.muted,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,transition:"all 0.2s" }}>{paso>s?"":s}</div>
-              <span style={{ fontSize:9,color:paso>=s?T.accent:T.muted,fontWeight:paso===s?700:400,whiteSpace:"nowrap" }}>{["Archivo","Columnas","Equipos","Confirmar"][i]}</span>
+              <span style={{ fontSize:9,color:paso>=s?T.accent:T.muted,fontWeight:paso===s?700:400,whiteSpace:"nowrap" }}>{label}</span>
             </div>
-            {i<3&&<div style={{ flex:1,height:2,background:paso>s?T.accent:T.border,margin:"0 6px 18px",transition:"background 0.3s" }}/>}
+            {i<(tieneSecundaria?3:2)&&<div style={{ flex:1,height:2,background:paso>s?T.accent:T.border,margin:"0 6px 18px",transition:"background 0.3s" }}/>}
           </React.Fragment>
-        ))}
+        );})}
       </div>
 
       <div style={{ padding:"16px 28px 28px",display:"flex",flexDirection:"column",gap:16,maxHeight:"70vh",overflowY:"auto" }}>
 
         {/* PASO 1 */}
         {paso===1&&(<>
-          <p style={{ fontSize:13,color:T.sub,margin:0 }}>Sube un archivo Excel (.xlsx) o CSV con los datos de tus clientes. La primera fila debe contener los nombres de las columnas.</p>
+          <p style={{ fontSize:13,color:T.sub,margin:0 }}>Sube un archivo Excel (.xlsx) o CSV con los datos de tus {clientesConfig.entidadPlural||"registros"}. La primera fila debe contener los nombres de las columnas.</p>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display:"none" }} onChange={handleClienteFile}/>
           <button onClick={()=>fileRef.current?.click()} style={{ padding:"32px",borderRadius:12,border:`2px dashed ${clienteFile?T.green:T.border}`,background:clienteFile?T.greenLight:"#fafafa",color:clienteFile?T.green:T.sub,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textAlign:"center",transition:"all 0.15s" }}>
             {clienteFile?`${clienteFile.name}`:"Haz clic para seleccionar archivo .xlsx o .csv"}
@@ -316,7 +480,7 @@ export default function ImportarExcelModal({ data, refresh, onClose }) {
         {paso===2&&(<>
           <p style={{ fontSize:13,color:T.sub,margin:0 }}>Indica qué columna del Excel corresponde a cada campo. Los campos marcados con * son obligatorios.</p>
           <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10 }}>
-            {CL_CAMPOS.map(f=>(
+            {clientesConfig.campos.map(f=>(
               <div key={f.key} style={{display:"flex",flexDirection:"column",gap:4}}>
                 <label style={{fontSize:11,fontWeight:600,color:T.sub}}>{f.label}{f.required?" *":""}</label>
                 <ColSel value={map[f.key]} onChange={v=>setMap(p=>({...p,[f.key]:v}))} cols={xlsCols} rows={xlsRows}/>
@@ -334,8 +498,8 @@ export default function ImportarExcelModal({ data, refresh, onClose }) {
           </div>
         </>)}
 
-        {/* PASO 3 */}
-        {paso===3&&(<>
+        {/* PASO 3 (solo si la config primaria trae entidad secundaria) */}
+        {paso===3&&tieneSecundaria&&(<>
           <p style={{ fontSize:13,color:T.sub,margin:0 }}>Opcionalmente sube un archivo con los equipos de los clientes. La columna "Cliente" debe contener el nombre, teléfono o email del cliente para vincularlos.</p>
           <input ref={eqFileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display:"none" }} onChange={handleEquipoFile}/>
           <button onClick={()=>eqFileRef.current?.click()} style={{ padding:"24px",borderRadius:12,border:`2px dashed ${equipoFile?T.green:T.border}`,background:equipoFile?T.greenLight:"#fafafa",color:equipoFile?T.green:T.sub,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textAlign:"center",transition:"all 0.15s" }}>
@@ -343,7 +507,7 @@ export default function ImportarExcelModal({ data, refresh, onClose }) {
           </button>
           {eqCols.length>0&&(<>
             <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10 }}>
-              {EQ_CAMPOS.map(f=>(
+              {equiposConfig.campos.map(f=>(
                 <Field key={f.key} label={f.label+(f.required?" *":"")}>
                   <ColSel value={eqMap[f.key]} onChange={v=>setEqMap(p=>({...p,[f.key]:v}))} cols={eqCols}/>
                 </Field>
@@ -357,47 +521,74 @@ export default function ImportarExcelModal({ data, refresh, onClose }) {
           <div style={{ display:"flex",justifyContent:"space-between" }}>
             <Btn ch="← Atrás" onClick={()=>setPaso(2)} v="g"/>
             <div style={{ display:"flex",gap:8 }}>
-              <Btn ch="Saltar equipos" onClick={()=>setPaso(4)} v="g"/>
-              <Btn ch="Siguiente →" onClick={()=>setPaso(4)}/>
+              <Btn ch="Saltar equipos" onClick={()=>setPaso(pasoConfirmar)} v="g"/>
+              <Btn ch="Siguiente →" onClick={()=>setPaso(pasoConfirmar)}/>
             </div>
           </div>
         </>)}
 
-        {/* PASO 4 */}
-        {paso===4&&(<>
-          <p style={{ fontSize:13,color:T.sub,margin:0 }}>Revisa los datos antes de importar. Se saltarán automáticamente los clientes con teléfono, email o nombre completo duplicado.</p>
-          <div>
-            <div style={{ fontSize:12,fontWeight:700,color:T.text,marginBottom:8 }}>
-              Clientes a importar — <span style={{ color:T.accent }}>{mappedClientes().length} registros</span>
-            </div>
-            <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
-              {previewClientes().map((c,i)=>(
-                <div key={i} style={{ background:T.surface,borderRadius:8,padding:"8px 12px",border:`1px solid ${T.border}`,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center" }}>
-                  <span style={{ fontSize:13,fontWeight:600,color:T.text,minWidth:130 }}>{c.nombre||"—"}</span>
-                  {c.telefono&&<span style={{ fontSize:12,color:T.sub }}>{c.telefono}</span>}
-                  {c.email&&<span style={{ fontSize:12,color:T.sub }}>{c.email}</span>}
-                  {c.direccion&&<span style={{ fontSize:11,color:T.muted,flex:1 }}>{c.direccion}</span>}
+        {/* PASO Confirmar */}
+        {paso===pasoConfirmar&&(<>
+          {clientesConfig.ejecutarImportacion ? (<>
+            <p style={{ fontSize:13,color:T.sub,margin:0 }}>Revisa los datos antes de importar. Los que coincidan con un material existente (por referencia o por nombre) se actualizarán en vez de duplicarse.</p>
+            {(() => {
+              const index = clientesConfig.buildIndex(clientesConfig.existentes);
+              const filas = buildFilasGenericas();
+              const plan = clientesConfig.contarPlan ? clientesConfig.contarPlan(filas, index) : null;
+              return (
+                <div>
+                  <div style={{ fontSize:12,fontWeight:700,color:T.text,marginBottom:8 }}>
+                    {clientesConfig.entidadPlural} a importar — <span style={{ color:T.accent }}>{filas.length} registros</span>
+                    {plan&&<span style={{ color:T.muted,fontWeight:400 }}> ({plan.añadir} nuevos, {plan.actualizar} actualizaciones)</span>}
+                  </div>
+                  <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+                    {filas.slice(0,5).map((f,i)=>(
+                      <div key={i} style={{ background:T.surface,borderRadius:8,padding:"8px 12px",border:`1px solid ${T.border}`,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center" }}>
+                        <span style={{ fontSize:13,fontWeight:600,color:T.text,minWidth:130 }}>{f.nombre||"—"}</span>
+                        {f.precio!=null&&!isNaN(f.precio)&&<span style={{ fontSize:12,color:T.sub }}>{f.precio} €</span>}
+                        {f.referencia&&<span style={{ fontSize:11,color:T.muted }}>{f.referencia}</span>}
+                      </div>
+                    ))}
+                    {filas.length>5&&<div style={{ fontSize:11,color:T.muted,textAlign:"center" }}>… y {filas.length-5} más</div>}
+                  </div>
                 </div>
-              ))}
-              {mappedClientes().length>5&&<div style={{ fontSize:11,color:T.muted,textAlign:"center" }}>… y {mappedClientes().length-5} más</div>}
-            </div>
-          </div>
-          {previewEquipos().length>0&&(
+              );
+            })()}
+          </>) : (<>
+            <p style={{ fontSize:13,color:T.sub,margin:0 }}>Revisa los datos antes de importar. Se saltarán automáticamente los clientes con teléfono, email o nombre completo duplicado.</p>
             <div>
               <div style={{ fontSize:12,fontWeight:700,color:T.text,marginBottom:8 }}>
-                Equipos a importar — <span style={{ color:T.accent }}>{eqRows.filter(r=>{ const i=eqCols.indexOf(eqMap.nombre); return i>=0&&String(r[i]||"").trim(); }).length} registros</span>
+                Clientes a importar — <span style={{ color:T.accent }}>{mappedClientes().length} registros</span>
               </div>
               <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
-                {previewEquipos().map((e,i)=>(
-                  <div key={i} style={{ background:"#eff6ff",borderRadius:8,padding:"8px 12px",border:"1px solid #bfdbfe",display:"flex",gap:12,flexWrap:"wrap",alignItems:"center" }}>
-                    <span style={{ fontSize:13,fontWeight:600,color:T.accent,minWidth:130 }}>{e.nombre}</span>
-                    <span style={{ fontSize:12,color:T.sub }}>→ {e.clienteRef||"sin cliente"}</span>
-                    {e.marca&&<span style={{ fontSize:11,color:T.muted }}>{e.marca}{e.modelo?` · ${e.modelo}`:""}</span>}
+                {previewClientes().map((c,i)=>(
+                  <div key={i} style={{ background:T.surface,borderRadius:8,padding:"8px 12px",border:`1px solid ${T.border}`,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center" }}>
+                    <span style={{ fontSize:13,fontWeight:600,color:T.text,minWidth:130 }}>{c.nombre||"—"}</span>
+                    {c.telefono&&<span style={{ fontSize:12,color:T.sub }}>{c.telefono}</span>}
+                    {c.email&&<span style={{ fontSize:12,color:T.sub }}>{c.email}</span>}
+                    {c.direccion&&<span style={{ fontSize:11,color:T.muted,flex:1 }}>{c.direccion}</span>}
                   </div>
                 ))}
+                {mappedClientes().length>5&&<div style={{ fontSize:11,color:T.muted,textAlign:"center" }}>… y {mappedClientes().length-5} más</div>}
               </div>
             </div>
-          )}
+            {previewEquipos().length>0&&(
+              <div>
+                <div style={{ fontSize:12,fontWeight:700,color:T.text,marginBottom:8 }}>
+                  Equipos a importar — <span style={{ color:T.accent }}>{eqRows.filter(r=>{ const i=eqCols.indexOf(eqMap.nombre); return i>=0&&String(r[i]||"").trim(); }).length} registros</span>
+                </div>
+                <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+                  {previewEquipos().map((e,i)=>(
+                    <div key={i} style={{ background:"#eff6ff",borderRadius:8,padding:"8px 12px",border:"1px solid #bfdbfe",display:"flex",gap:12,flexWrap:"wrap",alignItems:"center" }}>
+                      <span style={{ fontSize:13,fontWeight:600,color:T.accent,minWidth:130 }}>{e.nombre}</span>
+                      <span style={{ fontSize:12,color:T.sub }}>→ {e.clienteRef||"sin cliente"}</span>
+                      {e.marca&&<span style={{ fontSize:11,color:T.muted }}>{e.marca}{e.modelo?` · ${e.modelo}`:""}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>)}
           {importing&&(
             <div>
               <div style={{ display:"flex",justifyContent:"space-between",marginBottom:6 }}>
@@ -410,7 +601,7 @@ export default function ImportarExcelModal({ data, refresh, onClose }) {
             </div>
           )}
           <div style={{ display:"flex",justifyContent:"space-between" }}>
-            <Btn ch="← Atrás" onClick={()=>setPaso(3)} v="g" disabled={importing}/>
+            <Btn ch="← Atrás" onClick={()=>setPaso(tieneSecundaria?3:2)} v="g" disabled={importing}/>
             <Btn ch={importing?"Importando...":"Importar ahora"} onClick={ejecutarImportacion} disabled={importing}/>
           </div>
         </>)}
