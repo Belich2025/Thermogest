@@ -4,6 +4,7 @@ import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { supabase } from "../../supabase.js";
 import { mkInp } from "../../utils/styles.js";
 import Field from "../ui/Field.jsx";
+import InstalarAppBtn from "../shared/InstalarAppBtn.jsx";
 
 export default function Login({ onLogin }) {
   const { T } = useTheme();
@@ -61,6 +62,7 @@ export default function Login({ onLogin }) {
             <button type="submit" disabled={loading||!email||!pw} style={{ width:"100%",padding:"12px",borderRadius:10,border:"none",background:T.accent,color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",opacity:loading?0.7:1,marginTop:4 }}>{loading?"Accediendo...":"Acceder"}</button>
             {notifBtn}
           </form>
+          <div style={{ marginTop:14, display:"flex", justifyContent:"center" }}><InstalarAppBtn/></div>
         </div>
       </div>
     </div>
