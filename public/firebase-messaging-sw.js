@@ -39,3 +39,24 @@ self.addEventListener('notificationclick', function(event) {
     })
   );
 });
+
+// Activa la versión nueva del SW de inmediato (sin esperar a que se cierren
+// las pestañas abiertas), para que el criterio de instalabilidad de Chrome
+// se cumpla desde el primer registro tras el deploy.
+self.addEventListener('install', function() {
+  self.skipWaiting();
+});
+self.addEventListener('activate', function(event) {
+  event.waitUntil(self.clients.claim());
+});
+
+// Fetch handler mínimo, solo para cumplir el criterio de instalabilidad de
+// Chrome (exige un SW con listener de 'fetch'). Nada de caché: únicamente
+// reenvía a red las peticiones GET del propio origen; todo lo demás (POST,
+// llamadas a Supabase/Firebase, streaming) no se toca y sigue su curso normal.
+self.addEventListener('fetch', function(event) {
+  const req = event.request;
+  if (req.method === 'GET' && new URL(req.url).origin === self.location.origin) {
+    event.respondWith(fetch(req));
+  }
+});
