@@ -8,6 +8,7 @@ import { startVoiceSimple } from "./hooks/useVoice.js";
 import { BS_ACTIVOS, BS_ALL, SO_B, MS_ACTIVOS, SO_M, PS_ORDER, MT_TIPOS, MT } from "./constants/status.js";
 import { EQ, RITE_CHECKLIST, TIPO_EQUIPO_OPTIONS } from "./constants/equipment.js";
 import { useTheme } from "./ThemeContext.jsx";
+import { registerServiceWorker } from "./serviceWorker.js";
 import Badge from "./components/ui/Badge.jsx";
 import BadgeProg from "./components/ui/BadgeProg.jsx";
 import Field from "./components/ui/Field.jsx";
@@ -113,6 +114,10 @@ export default function App() {
     supabase.auth.getSession().then(({data:{session}})=>{ if(session) loadUser(session.user.id); });
     supabase.auth.onAuthStateChange((_,session)=>{ if(session) loadUser(session.user.id); else setUser(null); });
   },[]);
+
+  // SW siempre registrado (habilita instalación PWA), independiente de si
+  // el usuario acepta notificaciones o no.
+  useEffect(()=>{ registerServiceWorker(); },[]);
 
   // ── Tiempo real
   useEffect(()=>{

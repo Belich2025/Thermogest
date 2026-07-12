@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { registerServiceWorker } from "./serviceWorker.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC40dyuVwVflnxWDY2dabu7Q0RaMLIw0_M",
@@ -35,8 +36,9 @@ export async function requestNotificationPermission() {
     console.log("4b. Permiso tras solicitud:", permission);
     if (permission !== "granted") return null;
 
-    console.log("5. Registrando Service Worker...");
-    const reg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    console.log("5. Reutilizando registro del Service Worker...");
+    const reg = await registerServiceWorker();
+    if (!reg) { console.error("Service Worker no disponible"); return null; }
     console.log("6. SW registrado:", reg.scope);
     await navigator.serviceWorker.ready;
     console.log("7. SW activo y listo");
